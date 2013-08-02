@@ -28,20 +28,20 @@ public class Receiver implements Listerner {
 	public void Listen(Event event) {
 		if (event.getSender().equals(server)) {
 			PackageModel eventPackage = event.getPackageModel();
-			
 			if (eventPackage.equals(nextPackge)) {
 				nextPackge = new PackageModel(nextPackge.getValue() + simulator.getMss());
 				Set<PackageModel> removePackage = new TreeSet<PackageModel>();
 				
 				while (receivedPackage.contains(nextPackge)) {
-					nextPackge = new PackageModel(nextPackge.getValue() + simulator.getMss());
 					removePackage.add(nextPackge);
+					nextPackge = new PackageModel(nextPackge.getValue() + simulator.getMss());
 				}
 				
 				receivedPackage.removeAll(removePackage);
-			} else {
+			} else if (eventPackage.compareTo(nextPackge) == 1) {
 				receivedPackage.add(eventPackage);
 			}
+			
 			nextPackge.setSackOption(receivedPackage);
 			
 			long initialTime = event.getTime();

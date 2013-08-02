@@ -132,6 +132,9 @@ public class Server implements Listerner {
 			receivedAckPackages = eventPackage.getSackOption();
 			for (PackageModel packageModel : receivedAckPackages) {
 				cancelTimeout(packageModel);
+				if (eventPackage.compareTo(packageModel) == 1) {
+					throw new RuntimeException("Pacotes recebidos não foram apagados direito");
+				}
 			}
 			
 			rtt = event.getTime() - event.getGoOutServerTime();					
@@ -165,7 +168,11 @@ public class Server implements Listerner {
 				if (this.status.equals(ServerStatus.SLOW_START)) {
 					cwnd += simulator.getMss();
 				}else if(this.status.equals(ServerStatus.CONGESTION_AVOIDANCE)) {
-					cwnd += simulator.getMss()*simulator.getMss()/cwnd;
+					Double numOfAcks = cwnd/simulator.getMss();
+					if (numOfAcks == 0) {
+						System.out.println(numOfAcks);
+					}
+					cwnd += simulator.getMss()/numOfAcks;
 				} else {
 					status = ServerStatus.CONGESTION_AVOIDANCE;
 					cwnd = threshold;
