@@ -118,9 +118,9 @@ public class Server implements Listerner {
 		if (event.getSender().equals(this)) {
 			threshold = cwnd/2;
 			cwnd = (double) simulator.getMss();
+			status = ServerStatus.CONGESTION_AVOIDANCE;
 			
-			nextPackageToSend = event.getPackageModel();
-			
+			nextPackageToSend = event.getPackageModel();			
 			resendPackages(event.getTime());
 		}		
 	}
@@ -136,23 +136,25 @@ public class Server implements Listerner {
 			
 			rtt = event.getTime() - event.getGoOutServerTime();					
 			
-			if (eventPackage.equals(lastAck)) {
-				duplicatedAcks++;
-				
+			if (eventPackage.equals(lastAck)) {				
 				if (this.status.equals(ServerStatus.FAST_RETRANSMIT)) {
 					cwnd += simulator.getMss();
-				}
-				
-				if (duplicatedAcks == 3) {
-					duplicatedAcks = 0;
-					threshold = cwnd/2;
-					cwnd = threshold + 3*simulator.getMss();
-					removeSendedPackage(lastAck);
-					nextPackageToSend = lastAck;
-					
-					resendPackages(event.getTime());
-					
-					status = ServerStatus.FAST_RETRANSMIT;
+					numOfPackages = getNumOfPackages();
+					getNextPackage();
+					sendPackage(event.getTime(), nextPackageToSend);					
+				}else {
+					duplicatedAcks++;
+					if (duplicatedAcks == 3) {
+						duplicatedAcks = 0;
+						threshold = cwnd/2;
+						cwnd = threshold + 3*simulator.getMss();
+						removeSendedPackage(lastAck);
+						nextPackageToSend = lastAck;
+						
+						resendPackages(event.getTime());
+						
+						status = ServerStatus.FAST_RETRANSMIT;
+					}
 				}
 			}else {
 				cancelTimeout(eventPackage);

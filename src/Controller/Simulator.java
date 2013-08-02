@@ -53,7 +53,7 @@ public class Simulator {
 		server.startServer(receiver);
 		Event event = null;
 		Long time  = 0l;
-		Long finalTime = 42*1000*1000000l;
+		Long finalTime = 50*1000*1000000l;
 		while (simulator.eventBuffer.size() > 0) {
 			event = simulator.eventBuffer.remove(0);
 			if (event.getTime() < time) {
