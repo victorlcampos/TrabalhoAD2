@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import models.interfaces.Listerner;
+import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
 import Enum.ServerStatus;
 
-public class Server implements Listerner {
+public class Server implements Listener {
 	private static Integer id = 1;
 	private Integer myId;
 	
@@ -57,8 +57,8 @@ public class Server implements Listerner {
 		deviationReturnTime = 0;
 		
 		simulator = Simulator.getInstance();
-		simulator.registerListerner(this, EventType.TIME_OUT);
-		simulator.registerListerner(this, EventType.ACK);
+		simulator.registerListener(this, EventType.TIME_OUT);
+		simulator.registerListener(this, EventType.ACK);
 	}
 	
 	public void startServer(Receiver receiver) {

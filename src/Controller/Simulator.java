@@ -14,12 +14,12 @@ import models.Receiver;
 import models.Router;
 import models.Server;
 import models.ServerGroup;
-import models.interfaces.Listerner;
+import models.interfaces.Listener;
 import Enum.EventType;
 import Enum.RouterType;
 
 public class Simulator {
-	private Map<EventType, List<Listerner>> listerners;
+	private Map<EventType, List<Listener>> listeners;
 	private Map<Long, Integer> data;
 	private List<Event> eventBuffer;
 	private List<Server> servers;
@@ -34,7 +34,7 @@ public class Simulator {
 	}
 
 	private Simulator() {
-		listerners = new HashMap<EventType, List<Listerner>>();
+		listeners = new HashMap<EventType, List<Listener>>();
 		data = new HashMap<Long, Integer>();
 		servers = new ArrayList<Server>();
 		eventBuffer = new ArrayList<Event>();
@@ -59,9 +59,9 @@ public class Simulator {
 			if (event.getTime() < time) {
 				throw new RuntimeException("Evento no passado");
 			}
-			for (Listerner listerner : simulator.listerners
+			for (Listener listener : simulator.listeners
 					.get(event.getType())) {
-				listerner.Listen(event);
+				listener.Listen(event);
 			}
 			
 			time = event.getTime();
@@ -88,14 +88,14 @@ public class Simulator {
 		data.put(time, (int) (Math.floor(server.getCwnd()/mss)));
 	}
 
-	public void registerListerner(Listerner listerner, EventType eventType) {
-		List<Listerner> eventListerners = listerners.get(eventType);
-		if (eventListerners == null) {
-			eventListerners = new ArrayList<Listerner>();
-			listerners.put(eventType, eventListerners);
+	public void registerListener(Listener listener, EventType eventType) {
+		List<Listener> eventListeners = listeners.get(eventType);
+		if (eventListeners == null) {
+			eventListeners = new ArrayList<Listener>();
+			listeners.put(eventType, eventListeners);
 		}
 
-		eventListerners.add(listerner);
+		eventListeners.add(listener);
 	}
 
 	public Long getMss() {

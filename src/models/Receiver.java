@@ -3,49 +3,52 @@ package models;
 import java.util.Set;
 import java.util.TreeSet;
 
-import models.interfaces.Listerner;
+import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
 
-public class Receiver implements Listerner {
+public class Receiver implements Listener {
 	private Server server;
-	private PackageModel nextPackge;
+	private PackageModel nextPackage;
 	private Simulator simulator;
-	private Set<PackageModel> receivedPackage;
+	private Set<PackageModel> receivedPackages;
 	
 	public Receiver(Server server) {
 		super();
 		this.server = server;
-		nextPackge = new PackageModel(0);
+		nextPackage = new PackageModel(0);
 		
-		receivedPackage = new TreeSet<PackageModel>();
+		receivedPackages = new TreeSet<PackageModel>();
 		
 		simulator = Simulator.getInstance();
-		simulator.registerListerner(this, EventType.PACKAGE_DELIVERED);
+		simulator.registerListener(this, EventType.PACKAGE_DELIVERED);
 	}
 
 	@Override
 	public void Listen(Event event) {
 		if (event.getSender().equals(server)) {
 			PackageModel eventPackage = event.getPackageModel();
-			if (eventPackage.equals(nextPackge)) {
-				nextPackge = new PackageModel(nextPackge.getValue() + simulator.getMss());
-				Set<PackageModel> removePackage = new TreeSet<PackageModel>();
+			if (eventPackage.equals(nextPackage)) {
 				
-				while (receivedPackage.contains(nextPackge)) {
-					removePackage.add(nextPackge);
-					nextPackge = new PackageModel(nextPackge.getValue() + simulator.getMss());
+				//Procura próximo pacote ainda não recebido
+				nextPackage = new PackageModel(nextPackage.getValue() + simulator.getMss());
+				Set<PackageModel> packagesToRemove = new TreeSet<PackageModel>();
+				
+				while (receivedPackages.contains(nextPackage)) {
+					packagesToRemove.add(nextPackage);
+					nextPackage = new PackageModel(nextPackage.getValue() + simulator.getMss());
 				}
 				
-				receivedPackage.removeAll(removePackage);
-			} else if (eventPackage.compareTo(nextPackge) == 1) {
-				receivedPackage.add(eventPackage);
+				//Limpa pacotes da primeira sequencia completa da lista de recebidos.
+				receivedPackages.removeAll(packagesToRemove);
+			} else if (eventPackage.compareTo(nextPackage) == 1){ //Se o pacote recebido for posterior ao esperado. Se for anterior ignora, pois já foi recebido
+				receivedPackages.add(eventPackage);
 			}
 			
-			nextPackge.setSackOption(receivedPackage);
+			nextPackage.setSackOption(receivedPackages);
 			
 			long initialTime = event.getTime();
-			simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.getGoOutServerTime(), EventType.ACK, nextPackge);
+			simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.getGoOutServerTime(), EventType.ACK, nextPackage);
 		}				
 	}	
 }

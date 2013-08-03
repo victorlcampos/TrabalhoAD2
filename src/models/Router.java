@@ -3,14 +3,15 @@ package models;
 import java.util.ArrayList;
 import java.util.List;
 
-import models.interfaces.Listerner;
+import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
 import Enum.RouterType;
 
-public class Router implements Listerner {
+public class Router implements Listener {
 	private List<Event> eventBuffer;
 	private Integer bufferSize;
+	/** Taxa com que a fila é esvaziada em bytes */
 	private Long broadcastRate;
 
 	private RouterType type;
@@ -30,8 +31,8 @@ public class Router implements Listerner {
 
 		simulator = Simulator.getInstance();
 
-		simulator.registerListerner(this, EventType.PACKAGE_SENT);
-		simulator.registerListerner(this, EventType.PACKAGE_DELIVERED);
+		simulator.registerListener(this, EventType.PACKAGE_SENT);
+		simulator.registerListener(this, EventType.PACKAGE_DELIVERED);
 		lastTimeDelivered = 0l;
 	}
 
@@ -42,9 +43,10 @@ public class Router implements Listerner {
 			if (type.equals(RouterType.FIFO)) {
 				if(onService) {
 					if (eventBuffer.size() < bufferSize) {
-						eventBuffer.add(event);					
+						eventBuffer.add(event);	//Caso o buffer esteja cheio, o pacote é descartado.	
 					}
 				} else {
+					//Caso o buffer esteja vazio, inicia o atendimento imediatamente.
 					deliverPackage(event);
 				}
 			} else {
@@ -56,7 +58,7 @@ public class Router implements Listerner {
 				if (eventBuffer.size() == 0) {
 					onService = false;
 				} else {
-					deliverPackage(eventBuffer.remove(0));
+					deliverPackage(eventBuffer.remove(0));//Já que pacote acabou de ser servido, inicia serviço do outro.
 				}
 			} else {
 				// TODO - Fazer o Red
