@@ -2,6 +2,7 @@ package models;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -57,14 +58,17 @@ public class Server implements Listerner {
 		deviationReturnTime = 0;
 		
 		simulator = Simulator.getInstance();
-		simulator.registerListerner(this, EventType.TIME_OUT);
-		simulator.registerListerner(this, EventType.ACK);
+		simulator.registerListener(this, EventType.TIME_OUT);
+		simulator.registerListener(this, EventType.ACK);
 	}
 	
 	public void startServer(Receiver receiver) {
 		this.receiver = receiver;
 		lastAck = new PackageModel(0);
-		sendPackage(0l, lastAck);
+		
+		Random rand = new Random(System.nanoTime());
+		
+		sendPackage(rand.nextInt(100)*1000000l, lastAck);
 	}
 
 	private void sendPackage(Long initialTime, PackageModel packageModel) {

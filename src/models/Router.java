@@ -30,8 +30,8 @@ public class Router implements Listerner {
 
 		simulator = Simulator.getInstance();
 
-		simulator.registerListerner(this, EventType.PACKAGE_SENT);
-		simulator.registerListerner(this, EventType.PACKAGE_DELIVERED);
+		simulator.registerListener(this, EventType.PACKAGE_SENT);
+		simulator.registerListener(this, EventType.PACKAGE_DELIVERED);
 		lastTimeDelivered = 0l;
 	}
 

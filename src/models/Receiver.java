@@ -21,7 +21,7 @@ public class Receiver implements Listerner {
 		receivedPackage = new TreeSet<PackageModel>();
 		
 		simulator = Simulator.getInstance();
-		simulator.registerListerner(this, EventType.PACKAGE_DELIVERED);
+		simulator.registerListener(this, EventType.PACKAGE_DELIVERED);
 	}
 
 	@Override

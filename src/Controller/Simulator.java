@@ -53,7 +53,7 @@ public class Simulator {
 		server.startServer(receiver);
 		Event event = null;
 		Long time  = 0l;
-		Long finalTime = 10*1000*1000000l;
+		Long finalTime = 50*1000*1000000l;
 		while (simulator.eventBuffer.size() > 0) {
 			event = simulator.eventBuffer.remove(0);
 			if (event.getTime() < time) {
@@ -88,7 +88,7 @@ public class Simulator {
 		data.put(time, (int) (Math.floor(server.getCwnd()/mss)));
 	}
 
-	public void registerListerner(Listerner listerner, EventType eventType) {
+	public void registerListener(Listerner listerner, EventType eventType) {
 		List<Listerner> eventListerners = listerners.get(eventType);
 		if (eventListerners == null) {
 			eventListerners = new ArrayList<Listerner>();
