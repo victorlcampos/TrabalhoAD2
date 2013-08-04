@@ -6,12 +6,12 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
-import models.interfaces.Listerner;
+import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
 import Enum.ServerStatus;
 
-public class Server implements Listerner {
+public class Server implements Listener {
 	private static Integer id = 1;
 	private Integer myId;
 	

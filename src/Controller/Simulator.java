@@ -8,23 +8,26 @@ import java.util.Map;
 
 import views.SimulatorView;
 
+import models.BackgroundTraffic;
 import models.Event;
 import models.PackageModel;
 import models.Receiver;
 import models.Router;
 import models.Server;
 import models.ServerGroup;
-import models.interfaces.Listerner;
+import models.interfaces.Listener;
 import Enum.EventType;
 import Enum.RouterType;
 
 public class Simulator {
-	private Map<EventType, List<Listerner>> listerners;
+	private Map<EventType, List<Listener>> listeners;
 	private Map<Long, Integer> data;
 	private List<Event> eventBuffer;
 	private List<Server> servers;
 	private static Simulator instance;
 	private Long mss;
+	private Integer routerRate;
+	private Integer serverRate;
 
 	public static Simulator getInstance() {
 		if (instance == null) {
@@ -34,7 +37,7 @@ public class Simulator {
 	}
 
 	private Simulator() {
-		listerners = new HashMap<EventType, List<Listerner>>();
+		listeners = new HashMap<EventType, List<Listener>>();
 		data = new HashMap<Long, Integer>();
 		servers = new ArrayList<Server>();
 		eventBuffer = new ArrayList<Event>();
@@ -50,22 +53,35 @@ public class Simulator {
 		new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
 
 		Receiver receiver = new Receiver(server);
-		server.startServer(receiver);
+		
+		BackgroundTraffic backgroundTraffic = new BackgroundTraffic(10, 24*1000*1000d);
+		server.startServer(receiver);			
+		
 		Event event = null;
 		Long time  = 0l;
 		Long finalTime = 50*1000*1000000l;
+		simulator.routerRate = 0;
+		simulator.serverRate = 0;
 		while (simulator.eventBuffer.size() > 0) {
 			event = simulator.eventBuffer.remove(0);
 			if (event.getTime() < time) {
 				throw new RuntimeException("Evento no passado");
 			}
-			for (Listerner listerner : simulator.listerners
+			for (Listener listener : simulator.listeners
 					.get(event.getType())) {
-				listerner.Listen(event);
+				listener.Listen(event);
 			}
 			
 			time = event.getTime();
 			switch (event.getType()) {
+			case PACKAGE_DELIVERED:
+				simulator.routerRate++;
+				break;
+			case PACKAGE_SENT:
+				if (event.getSender().getClass().equals(Server.class)) {
+					simulator.serverRate++;
+				}
+				break;
 			case ACK:
 				simulator.updatePlot(time, server);
 				break;
@@ -77,25 +93,28 @@ public class Simulator {
 			}
 			
 			Collections.sort(simulator.eventBuffer);
+			System.out.println(event);
 			if(finalTime < time) {
 				break;
 			}
 		}
 		new SimulatorView(simulator.data);
+		System.out.println(simulator.routerRate*1000*1000000l/time);
+		System.out.println(simulator.serverRate*1000*1000000l/time);
 	}
 
 	private  void updatePlot(Long time, Server server) {
 		data.put(time, (int) (Math.floor(server.getCwnd()/mss)));
 	}
 
-	public void registerListener(Listerner listerner, EventType eventType) {
-		List<Listerner> eventListerners = listerners.get(eventType);
-		if (eventListerners == null) {
-			eventListerners = new ArrayList<Listerner>();
-			listerners.put(eventType, eventListerners);
+	public void registerListener(Listener listener, EventType eventType) {
+		List<Listener> eventListeners = listeners.get(eventType);
+		if (eventListeners == null) {
+			eventListeners = new ArrayList<Listener>();
+			listeners.put(eventType, eventListeners);
 		}
 
-		eventListerners.add(listerner);
+		eventListeners.add(listener);
 	}
 
 	public Long getMss() {
