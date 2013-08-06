@@ -10,6 +10,7 @@ import Enum.RouterType;
 
 public class Router implements Listener {
 	private List<Event> eventBuffer;
+	/** Tamanho do buffer em pacotes */
 	private Integer bufferSize;
 	/** Taxa com que a fila é esvaziada em bytes */
 	private Long broadcastRate;
@@ -77,6 +78,6 @@ public class Router implements Listener {
 		
 		onService = true;
 		lastTimeDelivered = initialTime+serviceTime;
-		simulator.shotEvent(event.getSender(), lastTimeDelivered, event.getGoOutServerTime(), EventType.PACKAGE_DELIVERED, packageModel);
+		simulator.shotEvent(event.getSender(), lastTimeDelivered, event.leaveServerTime(), EventType.PACKAGE_DELIVERED, packageModel);
 	}
 }

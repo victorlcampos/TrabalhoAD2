@@ -25,6 +25,7 @@ public class PackageModel implements Comparable<PackageModel> {
 		this.sackOption = sackOption;
 	}
 
+	/**Compara o próximo pacote esperado (value) */
 	@Override
 	public boolean equals(Object obj) {
 		return this.value.equals(((PackageModel) obj).getValue());

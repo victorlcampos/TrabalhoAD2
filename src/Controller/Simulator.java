@@ -54,7 +54,7 @@ public class Simulator {
 
 		Receiver receiver = new Receiver(server);
 		
-		BackgroundTraffic backgroundTraffic = new BackgroundTraffic(10, 24*1000*1000d);
+		//BackgroundTraffic backgroundTraffic = new BackgroundTraffic(10, 24*1000*1000d);
 		server.startServer(receiver);			
 		
 		Event event = null;
@@ -133,9 +133,9 @@ public class Simulator {
 		this.eventBuffer = eventBuffer;
 	}
 
-	public void shotEvent(Object sender, long time, long goOutServerTime,
+	public void shotEvent(Object sender, long time, long leaveServerTime,
 			EventType type, PackageModel packageModel) {
-		Event event = new Event(packageModel, sender, time, goOutServerTime,
+		Event event = new Event(packageModel, sender, time, leaveServerTime,
 				type);
 		eventBuffer.add(event);
 	}

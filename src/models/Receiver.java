@@ -48,7 +48,7 @@ public class Receiver implements Listener {
 			nextPackage.setSackOption(receivedPackages);
 			
 			long initialTime = event.getTime();
-			simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.getGoOutServerTime(), EventType.ACK, nextPackage);
+			simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, nextPackage);
 		}				
 	}	
 }

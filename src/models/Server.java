@@ -15,6 +15,7 @@ public class Server implements Listener {
 	private static Integer id = 1;
 	private Integer myId;
 	
+	/** Taxa de transmissão de um pacote em bytes*/
 	private Long broadcastRate;
 	private Long rtt;
 	private Double threshold;
@@ -32,14 +33,13 @@ public class Server implements Listener {
 	private PackageModel lastAck;
 	private PackageModel nextPackageToSend;
 	
-	private Set<PackageModel> sendedPackages;
+	private Set<PackageModel> sentPackages;
 	private Set<PackageModel> receivedAckPackages;
 	
 	private long expectedReturnTime;
 	private long deviationReturnTime;
 	
-	public Server(Long cwnd, ServerGroup group,
-			Long broadcastRate) {
+	public Server(Long cwnd, ServerGroup group, Long broadcastRate) {
 		super();
 		this.cwnd = (double) cwnd;
 		this.group = group;
@@ -50,9 +50,10 @@ public class Server implements Listener {
 		myId = id++;
 		numOfPackages = 1;
 		
-		sendedPackages = new TreeSet<PackageModel>();
+		sentPackages = new TreeSet<PackageModel>();
 		receivedAckPackages = new TreeSet<PackageModel>();
 		
+		/** Tempo esperado de retorno do pacote */
 		expectedReturnTime = 4*group.getDelay();
 		rtt = expectedReturnTime;
 		deviationReturnTime = 0;
@@ -72,7 +73,7 @@ public class Server implements Listener {
 	}
 
 	private void sendPackage(Long initialTime, PackageModel packageModel) {
-		cancelTimeout(packageModel);
+		cancelTimeout(packageModel);//Cancela time out se houver, no caso de estar reenviando pacote.
 		
 		Long serviceTime = (long) (1000l*1000l*1000l*simulator.getMss()/broadcastRate);
 		Long finishedServiceTime = initialTime+serviceTime;		
@@ -81,7 +82,7 @@ public class Server implements Listener {
 		Long timeoutTime = getTimoutTime(finishedServiceTime);
 		simulator.shotEvent(this, timeoutTime, initialTime, EventType.TIME_OUT, packageModel);
 		
-		sendedPackages.add(packageModel);		
+		sentPackages.add(packageModel);		
 		numOfPackages--;
 		
 		if (numOfPackages > 0) {
@@ -91,9 +92,6 @@ public class Server implements Listener {
 	}
 
 	private Long getTimoutTime(Long finishedServiceTime) {
-		Long differenceBetweenRealAndExpectation = rtt - expectedReturnTime;
-		deviationReturnTime += (long) (Math.abs(differenceBetweenRealAndExpectation) - deviationReturnTime)/4;
-		expectedReturnTime += (long) differenceBetweenRealAndExpectation/8;
 		Long timeOutTime = expectedReturnTime + 4l*deviationReturnTime;
 		
 		if (timeOutTime < 2*group.getDelay()) {
@@ -122,7 +120,7 @@ public class Server implements Listener {
 		if (event.getSender().equals(this)) {
 			threshold = cwnd/2;
 			cwnd = (double) simulator.getMss();
-			status = ServerStatus.CONGESTION_AVOIDANCE;
+			status = ServerStatus.SLOW_START;
 			
 			nextPackageToSend = event.getPackageModel();			
 			resendPackages(event.getTime());
@@ -141,9 +139,12 @@ public class Server implements Listener {
 				}
 			}
 			
-			rtt = event.getTime() - event.getGoOutServerTime();					
+			rtt = event.getTime() - event.leaveServerTime();					
+			Long differenceBetweenRealAndExpectation = rtt - expectedReturnTime;
+			deviationReturnTime += (long) (Math.abs(differenceBetweenRealAndExpectation) - deviationReturnTime)/4;
+			expectedReturnTime += (long) differenceBetweenRealAndExpectation/8;
 			
-			if (eventPackage.equals(lastAck)) {				
+			if (eventPackage.equals(lastAck)) {	//Se é um ack duplicado, ou seja, espera mesmo pacote que o último ack.	
 				if (this.status.equals(ServerStatus.FAST_RETRANSMIT)) {
 					cwnd += simulator.getMss();
 					numOfPackages = getNumOfPackages();
@@ -187,12 +188,12 @@ public class Server implements Listener {
 				lastAck = event.getPackageModel();
 				
 				Set<PackageModel> removeSendedPackages = new TreeSet<PackageModel>();
-				for (PackageModel packageModel : sendedPackages) {
+				for (PackageModel packageModel : sentPackages) {
 					if (packageModel.compareTo(lastAck) == -1) {
 						removeSendedPackages.add(packageModel);
 					}
 				}
-				sendedPackages.removeAll(removeSendedPackages);				
+				sentPackages.removeAll(removeSendedPackages);				
 				nextPackageToSend = lastAck;
 								
 				getNextPackage();
@@ -206,18 +207,19 @@ public class Server implements Listener {
 		cancelAllSentEventsEvent();
 		List<PackageModel> removedEvents = new ArrayList<PackageModel>();
 
-		for (PackageModel packageModel : sendedPackages) {
+		for (PackageModel packageModel : sentPackages) {
 			if (!receivedAckPackages.contains(packageModel)) {
 				removedEvents.add(packageModel);
 			}
 		}
-		sendedPackages.removeAll(removedEvents);
+		sentPackages.removeAll(removedEvents);
 		
 		numOfPackages = getNumOfPackages();
 		sendPackage(time, nextPackageToSend);		
 
 	}
-
+	
+	/** Cancela o time-out de todos os pacotes já recebidos */
 	private void cancelTimeout(PackageModel packageModel) {
 		List<Event> removedEvents = new ArrayList<Event>();
 		List<Event> eventBuffer = simulator.getEventBuffer();
@@ -247,11 +249,11 @@ public class Server implements Listener {
 	}
 
 	private void removeSendedPackage(PackageModel packageModel) {
-		sendedPackages.remove(packageModel);
+		sentPackages.remove(packageModel);
 	}
 
 	private void getNextPackage() {
-		while(sendedThisPackage(nextPackageToSend)) {
+		while(sentThisPackage(nextPackageToSend)) {
 			nextPackageToSend = new PackageModel(nextPackageToSend.getValue() + simulator.getMss());
 		}
 	}
@@ -264,8 +266,8 @@ public class Server implements Listener {
 		this.cwnd = cwnd;
 	}
 
-	private boolean sendedThisPackage(PackageModel nextPackageToSend) {
-		return sendedPackages.contains(nextPackageToSend);
+	private boolean sentThisPackage(PackageModel nextPackageToSend) {
+		return sentPackages.contains(nextPackageToSend);
 	}
 
 	private void setStatus() {
@@ -279,7 +281,7 @@ public class Server implements Listener {
 	}
 	
 	private Integer getNumOfPackages() {
-		Integer value = (int) Math.floor(cwnd/simulator.getMss()) - sendedPackages.size() + receivedAckPackages.size();
+		Integer value = (int) Math.floor(cwnd/simulator.getMss()) - sentPackages.size() + receivedAckPackages.size();
 		return  Math.max(0, value);
 	}
 

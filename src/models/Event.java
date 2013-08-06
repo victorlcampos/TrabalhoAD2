@@ -6,16 +6,16 @@ public class Event implements Comparable<Event> {
 	private PackageModel packageModel;
 	private Object sender;
 	private Long time;
-	private Long goOutServerTime;
+	private Long leaveServerTime;
 	private EventType type;
 	
 	public Event(PackageModel packageModel, Object sender, Long time,
-			Long goOutServerTime, EventType type) {
+			Long leaveServerTime, EventType type) {
 		super();
 		this.packageModel = packageModel;
 		this.sender = sender;
 		this.time = time;
-		this.goOutServerTime = goOutServerTime;
+		this.leaveServerTime = leaveServerTime;
 		this.type = type;
 	}
 
@@ -43,12 +43,12 @@ public class Event implements Comparable<Event> {
 		this.time = time;
 	}
 
-	public Long getGoOutServerTime() {
-		return goOutServerTime;
+	public Long leaveServerTime() {
+		return leaveServerTime;
 	}
 
-	public void setGoOutServerTime(Long goOutServerTime) {
-		this.goOutServerTime = goOutServerTime;
+	public void leaveServerTime(Long leaveServerTime) {
+		this.leaveServerTime = leaveServerTime;
 	}
 
 	public EventType getType() {
