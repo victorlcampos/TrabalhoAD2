@@ -28,7 +28,7 @@ public class Receiver implements Listener {
 	public void Listen(Event event) {
 		if (event.getSender().equals(server)) {
 			PackageModel eventPackage = event.getPackageModel();
-			
+						
 			if (eventPackage.equals(nextPackage)) {
 				
 				//Procura próximo pacote ainda não recebido
@@ -52,7 +52,12 @@ public class Receiver implements Listener {
 	}
 
 	private void sendAck(Event event) {
-		nextPackage.setSackOption(receivedPackages);
+		Set<PackageModel> newReceivedPackages = new TreeSet<PackageModel>();
+		for (PackageModel packageModel : receivedPackages) {
+			newReceivedPackages.add(packageModel);
+		}
+		
+		nextPackage.setSackOption(newReceivedPackages);
 		
 		long initialTime = event.getTime();
 		simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, nextPackage);
