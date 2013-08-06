@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import Utils.ConfidenceInterval;
+
 import views.SimulatorView;
 
 import models.BackgroundTraffic;
@@ -26,6 +28,7 @@ public class Simulator {
 	private List<Server> servers;
 	private static Simulator instance;
 	private Long mss;
+	private List<Double> means;
 	private Integer routerRate;
 	private Integer serverRate;
 
@@ -41,6 +44,7 @@ public class Simulator {
 		data = new HashMap<Long, Integer>();
 		servers = new ArrayList<Server>();
 		eventBuffer = new ArrayList<Event>();
+		means = new ArrayList<Double>();
 
 		this.mss = 1500l;
 	}
@@ -50,20 +54,28 @@ public class Simulator {
 
 		ServerGroup serverGroup = new ServerGroup(100 * 1000l*1000l);
 		Server server = new Server(simulator.getMss(), serverGroup, 1000l*1000l*1000l/8);
-		new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
 
-		Receiver receiver = new Receiver(server);
-		
-		//BackgroundTraffic backgroundTraffic = new BackgroundTraffic(10, 24*1000*1000d);
+		new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
+		new BackgroundTraffic(30, 24*1000*1000d);
+
+		Receiver receiver = new Receiver(server);		
 		server.startServer(receiver);			
 		
 		Event event = null;
+		
 		Long time  = 0l;
-		Long finalTime = 50*1000*1000000l;
+		Long totalTime = 50*1000*1000000l;
+		Boolean lastTime = false;
+		Boolean firstTime = false;
+		Long finalTime = totalTime;
+		
 		simulator.routerRate = 0;
 		simulator.serverRate = 0;
+		Collections.sort(simulator.eventBuffer);
+
 		while (simulator.eventBuffer.size() > 0) {
 			event = simulator.eventBuffer.remove(0);
+
 			if (event.getTime() < time) {
 				throw new RuntimeException("Evento no passado");
 			}
@@ -83,24 +95,44 @@ public class Simulator {
 				}
 				break;
 			case ACK:
-				simulator.updatePlot(time, server);
+				if (lastTime) {					
+					simulator.updatePlot(time, server);
+				}
 				break;
 			case TIME_OUT:
-				simulator.updatePlot(time, server);
+				if (lastTime) {
+					simulator.updatePlot(time, server);					
+				}
 				break;
 			default:
 				break;
 			}
 			
 			Collections.sort(simulator.eventBuffer);
-			System.out.println(event);
+			
 			if(finalTime < time) {
-				break;
+				if (lastTime) {				
+					break;
+				}else {
+					if (!firstTime) {						
+						simulator.means.add(simulator.serverRate*1000*1000000d/(totalTime));
+						if (ConfidenceInterval.getPrecision(simulator.means) <= 10) {
+							lastTime = true;
+						}
+					}
+					
+					finalTime += totalTime;
+					simulator.serverRate = 0;
+					firstTime = false;
+				}
 			}
 		}
+		
+		System.out.println(simulator.means);
+		System.out.println(ConfidenceInterval.getConfidenceInterval(simulator.means));
 		new SimulatorView(simulator.data);
 		System.out.println(simulator.routerRate*1000*1000000l/time);
-		System.out.println(simulator.serverRate*1000*1000000l/time);
+		System.out.println();
 	}
 
 	private  void updatePlot(Long time, Server server) {
@@ -137,6 +169,9 @@ public class Simulator {
 			EventType type, PackageModel packageModel) {
 		Event event = new Event(packageModel, sender, time, leaveServerTime,
 				type);
+		if (event.getSender().getClass().equals(Server.class) && event.getType().equals(EventType.PACKAGE_SENT)) {			
+			System.out.println(event);
+		}
 		eventBuffer.add(event);
 	}
 }
