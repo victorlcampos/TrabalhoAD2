@@ -33,7 +33,11 @@ public class PackageModel implements Comparable<PackageModel> {
 	
 	@Override
 	public String toString() {
-		return value.toString();
+		if (sackOption.size() > 0) {
+			return value.toString()+"("+sackOption+")";			
+		} else {
+			return value.toString();
+		}
 	}
 
 	@Override

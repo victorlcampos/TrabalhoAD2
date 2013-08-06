@@ -28,6 +28,7 @@ public class Receiver implements Listener {
 	public void Listen(Event event) {
 		if (event.getSender().equals(server)) {
 			PackageModel eventPackage = event.getPackageModel();
+			
 			if (eventPackage.equals(nextPackage)) {
 				
 				//Procura próximo pacote ainda não recebido
@@ -41,14 +42,19 @@ public class Receiver implements Listener {
 				
 				//Limpa pacotes da primeira sequencia completa da lista de recebidos.
 				receivedPackages.removeAll(packagesToRemove);
+				sendAck(event);
 			} else if (eventPackage.compareTo(nextPackage) == 1){ //Se o pacote recebido for posterior ao esperado. Se for anterior ignora, pois já foi recebido
 				receivedPackages.add(eventPackage);
+				sendAck(event);
 			}
 			
-			nextPackage.setSackOption(receivedPackages);
-			
-			long initialTime = event.getTime();
-			simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, nextPackage);
 		}				
+	}
+
+	private void sendAck(Event event) {
+		nextPackage.setSackOption(receivedPackages);
+		
+		long initialTime = event.getTime();
+		simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, nextPackage);
 	}	
 }
