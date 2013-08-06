@@ -95,10 +95,10 @@ public class Server implements Listener {
 		
 		Long serviceTime = (long) (1000l*1000l*1000l*simulator.getMss()/broadcastRate);
 		Long finishedServiceTime = initialTime+serviceTime;		
-		simulator.shotEvent(this, finishedServiceTime+group.getDelay(), initialTime, EventType.PACKAGE_SENT, packageModel);
+		simulator.shotEvent(this, finishedServiceTime+group.getDelay(), initialTime, EventType.PACKAGE_SENT, new PackageModel(packageModel.getValue()));
 		
 		Long timeoutTime = getTimoutTime(finishedServiceTime);
-		simulator.shotEvent(this, timeoutTime, initialTime, EventType.TIME_OUT, packageModel);
+		simulator.shotEvent(this, timeoutTime, initialTime, EventType.TIME_OUT, new PackageModel(packageModel.getValue()));
 		
 		sentPackages.add(packageModel);		
 		numOfPackages--;

@@ -78,6 +78,6 @@ public class Router implements Listener {
 		
 		onService = true;
 		lastTimeDelivered = initialTime+serviceTime;
-		simulator.shotEvent(event.getSender(), lastTimeDelivered, event.leaveServerTime(), EventType.PACKAGE_DELIVERED, packageModel);
+		simulator.shotEvent(event.getSender(), lastTimeDelivered, event.leaveServerTime(), EventType.PACKAGE_DELIVERED, new PackageModel(packageModel.getValue()));
 	}
 }
