@@ -122,6 +122,9 @@ public class Server implements Listener {
 
 	private void listenTimeOut(Event event) {
 		if (event.getSender().equals(this)) {
+			if (!sentPackages.contains(event.getPackageModel())) {
+				throw new RuntimeException("Timeout de um evento não enviado");
+			}
 			threshold = Math.max(cwnd/2, simulator.getMss());
 			
 			cwnd = (double) simulator.getMss();
@@ -255,11 +258,7 @@ public class Server implements Listener {
 		
 		cancelAllSentEventsEvent();
 		List<PackageModel> removedEvents = new ArrayList<PackageModel>();
-		
-		if (sentPackages.size() == 0 || sentPackages.size() < receivedAckPackages.size()) {
-			throw new RuntimeException("Lista de pacotes enviados corrompida");
-		}
-		
+
 		for (PackageModel packageModel : sentPackages) {
 			if (!receivedAckPackages.contains(packageModel)) {
 				removedEvents.add(packageModel);
