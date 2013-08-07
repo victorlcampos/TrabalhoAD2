@@ -56,7 +56,7 @@ public class Simulator {
 		Server server = new Server(simulator.getMss(), serverGroup, 1000l*1000l*1000l/8);
 
 		new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
-		new BackgroundTraffic(10, 24*1000*1000d);
+		new BackgroundTraffic(40, 24*1000*1000d);
 
 		Receiver receiver = new Receiver(server);		
 		server.startServer(receiver);			
