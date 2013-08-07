@@ -62,6 +62,10 @@ public class Receiver implements Listener {
 		returnPackage.setSackOption(newReceivedPackages);
 		
 		long initialTime = event.getTime();
+<<<<<<< HEAD
 		simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, new PackageModel(nextPackage.getValue()));
+=======
+		simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, returnPackage);
+>>>>>>> parent of 1b35877... Revert "adding debugger throw"
 	}	
 }
