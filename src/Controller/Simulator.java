@@ -55,7 +55,7 @@ public class Simulator {
 		ServerGroup serverGroup = new ServerGroup(100 * 1000l*1000l);
 		Server server = new Server(simulator.getMss(), serverGroup, 1000l*1000l*1000l/8);
 
-		new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
+		Router router = new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
 		new BackgroundTraffic(40, 24*1000*1000d);
 
 		Receiver receiver = new Receiver(server);		
@@ -75,15 +75,16 @@ public class Simulator {
 
 		while (simulator.eventBuffer.size() > 0) {
 			event = simulator.eventBuffer.remove(0);
-
+			
 			if (event.getTime() < time) {
 				throw new RuntimeException("Evento no passado");
 			}
+			
 			for (Listener listener : simulator.listeners
 					.get(event.getType())) {
 				listener.Listen(event);
 			}
-			
+						
 			time = event.getTime();
 			switch (event.getType()) {
 			case PACKAGE_DELIVERED:
@@ -108,8 +109,7 @@ public class Simulator {
 				break;
 			}
 			
-			Collections.sort(simulator.eventBuffer);
-			
+			Collections.sort(simulator.eventBuffer);			
 			if(finalTime < time) {
 				if (lastTime) {				
 					break;
@@ -170,7 +170,7 @@ public class Simulator {
 		Event event = new Event(packageModel, sender, time, leaveServerTime,
 				type);
 		if (event.getSender().getClass().equals(Server.class) && event.getType().equals(EventType.PACKAGE_SENT)) {			
-			System.out.println(event);
+//			System.out.println(event);
 		}
 		eventBuffer.add(event);
 	}

@@ -94,13 +94,20 @@ public class Server implements Listener {
 		cancelTimeout(packageModel);//Cancela time out se houver, no caso de estar reenviando pacote.
 		
 		Long serviceTime = (long) (1000l*1000l*1000l*simulator.getMss()/broadcastRate);
-		Long finishedServiceTime = initialTime+serviceTime;		
+		Long finishedServiceTime = initialTime+serviceTime;
+		
 		simulator.shotEvent(this, finishedServiceTime+group.getDelay(), initialTime, EventType.PACKAGE_SENT, new PackageModel(packageModel.getValue()));
 		
 		Long timeoutTime = getTimoutTime(finishedServiceTime);
 		simulator.shotEvent(this, timeoutTime, initialTime, EventType.TIME_OUT, new PackageModel(packageModel.getValue()));
 		
-		sentPackages.add(packageModel);		
+		if (sentPackages.contains(packageModel)) {
+			throw new RuntimeException("Enviando pacote já enviado");
+		} else {			
+			sentPackages.add(packageModel);
+			verifyTimeOut();
+		}
+		
 		numOfPackages--;
 		
 		if (numOfPackages > 0) {
@@ -121,20 +128,34 @@ public class Server implements Listener {
 
 
 	private void listenTimeOut(Event event) {
-		if (event.getSender().equals(this)) {
+		if (event.getSender().equals(this)) {						
 			threshold = Math.max(cwnd/2, simulator.getMss());
 			
 			cwnd = (double) simulator.getMss();
 			status = ServerStatus.SLOW_START;
+			duplicatedAcks = 0;
 			
-			nextPackageToSend = event.getPackageModel();			
+			nextPackageToSend = event.getPackageModel();
+			
+			if (receivedAckPackages.contains(nextPackageToSend)) {
+				throw new RuntimeException("Timeout de pacote já recebido");
+			}
+			
+			sentPackages.remove(nextPackageToSend);
+			verifyTimeOut();
+			
 			resendPackages(event.getTime());
 		}		
 	}
 
 	private void listenAck(Event event) {
 		if (event.getSender().equals(receiver)) {
-
+			
+//			if (sentPackages.size() == 0 || sentPackages.size() < receivedAckPackages.size()) {
+//				System.out.println("Stop");
+//				throw new RuntimeException("Lista de pacotes enviados corrompida");
+//			}
+			
 			PackageModel eventPackage = event.getPackageModel();
 			receivedAckPackages = eventPackage.getSackOption();
 			
@@ -166,15 +187,18 @@ public class Server implements Listener {
 			cwnd += simulator.getMss();
 			numOfPackages = getNumOfPackages();				
 		} else {
+			Integer waintingPackageSize = waitingPackages.size();
 			waitingPackages.remove(lastAck);
 			waitingPackages.removeAll(receivedAckPackages);
 						
 			if (waitingPackages.size() == 0) {
 				duplicatedAcks = 0;
 				status = ServerStatus.CONGESTION_AVOIDANCE;
+				System.out.println(ServerStatus.CONGESTION_AVOIDANCE);
 				cwnd = threshold;
 			} else {
 				cwnd += simulator.getMss();
+				cwnd -= (waintingPackageSize - waitingPackages.size());
 			}
 			
 			walkWithWindow(event);
@@ -226,6 +250,7 @@ public class Server implements Listener {
 		}
 		
 		sentPackages.removeAll(removeSendedPackages);
+		verifyTimeOut();
 		numOfPackages = getNumOfPackages();
 
 		nextPackageToSend = lastAck;
@@ -234,10 +259,11 @@ public class Server implements Listener {
 	private void duplicatedAck(Event event) {
 		duplicatedAcks++;
 		if (duplicatedAcks == 3) {
+			System.out.println(ServerStatus.FAST_RETRANSMIT);		
 			duplicatedAcks = 0;
 			threshold = Math.max(cwnd/2, simulator.getMss());
 			cwnd = threshold + 3*simulator.getMss();
-			removeSendedPackage(lastAck);
+			removeSentPackage(lastAck);
 			nextPackageToSend = lastAck;
 			
 			status = ServerStatus.FAST_RETRANSMIT;
@@ -248,35 +274,68 @@ public class Server implements Listener {
 	private void resendPackages(Long time) {
 		duplicatedAcks = 0;
 		waitingPackages.clear();
+				
 		
 		if (status.equals(ServerStatus.FAST_RETRANSMIT)) {
+			List<PackageModel> removedEvents = new ArrayList<PackageModel>();
 			waitingPackages.add(nextPackageToSend);
-		}
-		
-		cancelAllSentEventsEvent();
-		List<PackageModel> removedEvents = new ArrayList<PackageModel>();
-		
-		if (sentPackages.size() == 0 || sentPackages.size() < receivedAckPackages.size()) {
-			throw new RuntimeException("Lista de pacotes enviados corrompida");
-		}
-		
-		for (PackageModel packageModel : sentPackages) {
-			if (!receivedAckPackages.contains(packageModel)) {
-				removedEvents.add(packageModel);
-				cancelTimeout(packageModel);
-				if (status.equals(ServerStatus.FAST_RETRANSMIT)) {
+			for (PackageModel packageModel : sentPackages) {
+				if (!receivedAckPackages.contains(packageModel)) {
+					removedEvents.add(packageModel);
+					cancelTimeout(packageModel);
 					waitingPackages.add(packageModel);
 				}
 			}
+			sentPackages.removeAll(removedEvents);
+			verifyTimeOut();
+			cancelAllSentEventsEvent();
+		} else {
+			List<Event> removedEvents = new ArrayList<Event>();
+			List<Event> eventBuffer = simulator.getEventBuffer();
+			
+			for (int i = 0; i < eventBuffer.size(); i++) {
+				Event event = eventBuffer.get(i);
+				if (nextPackageToSend.compareTo(event.getPackageModel()) == -1) {								
+					if (event.getSender().equals(this) && event.getType().equals(EventType.PACKAGE_SENT)) {
+						removedEvents.add(event);
+						removeSentPackage(event.getPackageModel());
+						cancelTimeout(event.getPackageModel());
+					}
+				}
+			}	
+			eventBuffer.removeAll(removedEvents);
 		}
 		
-		sentPackages.removeAll(removedEvents);
 		
 		numOfPackages = getNumOfPackages();
 		sendPackage(time, nextPackageToSend);		
 
 	}
 	
+	private void verifyTimeOut() {
+		for (PackageModel sentPackage : sentPackages) {
+			Boolean constansTimeoutPackage = false;
+			
+			if (receivedAckPackages.contains(sentPackage)) {
+				continue;
+			}
+			
+			List<Event> eventBuffer = simulator.getEventBuffer();
+			
+			for (int i = 0; i < eventBuffer.size(); i++) {
+				Event event = eventBuffer.get(i);
+				if (event.getSender().equals(this) && event.getType().equals(EventType.TIME_OUT) && event.getPackageModel().equals(sentPackage)) {
+					constansTimeoutPackage = true;
+					break;
+				}
+			}
+			
+			if (!constansTimeoutPackage) {
+				throw new RuntimeException("Pacote "+sentPackage+" enviado sem timeout");
+			}
+		}		
+	}
+
 	private void cancelTimeout(PackageModel packageModel) {
 		List<Event> removedEvents = new ArrayList<Event>();
 		List<Event> eventBuffer = simulator.getEventBuffer();
@@ -299,14 +358,14 @@ public class Server implements Listener {
 			Event event = eventBuffer.get(i);
 			if (event.getSender().equals(this) && event.getType().equals(EventType.PACKAGE_SENT)) {
 				removedEvents.add(event);
-				removeSendedPackage(event.getPackageModel());
+				removeSentPackage(event.getPackageModel());
 				cancelTimeout(event.getPackageModel());
 			}
 		}	
 		eventBuffer.removeAll(removedEvents);
 	}
 
-	private void removeSendedPackage(PackageModel packageModel) {
+	private void removeSentPackage(PackageModel packageModel) {
 		sentPackages.remove(packageModel);
 	}
 
@@ -347,6 +406,14 @@ public class Server implements Listener {
 		return group;
 	}
 	
+	public Set<PackageModel> getSentPackages() {
+		return sentPackages;
+	}
+
+	public void setSentPackages(Set<PackageModel> sentPackages) {
+		this.sentPackages = sentPackages;
+	}
+
 	@Override
 	public String toString() {
 		return "Servidor "+myId;

@@ -66,6 +66,6 @@ public class Event implements Comparable<Event> {
 	
 	@Override
 	public String toString() {
-		return "Event "+type+" Ocorreu em "+time+"nanoSec enviado pelo "+sender+" com o pacote "+packageModel;
+		return type+" - "+time+" - "+sender+" - "+packageModel;
 	}
 }

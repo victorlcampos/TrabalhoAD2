@@ -44,7 +44,7 @@ public class Receiver implements Listener {
 				receivedPackages.removeAll(packagesToRemove);
 				nextPackage.setSackOption(receivedPackages);
 				sendAck(event);
-			} else if (eventPackage.compareTo(nextPackage) == 1){ //Se o pacote recebido for posterior ao esperado. Se for anterior ignora, pois já foi recebido
+			} else if (eventPackage.compareTo(nextPackage) == 1 && !receivedPackages.contains(eventPackage)){ //Se o pacote recebido for posterior ao esperado. Se for anterior ignora, pois já foi recebido
 				receivedPackages.add(eventPackage);
 				sendAck(event);
 			}
