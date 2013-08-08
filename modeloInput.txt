@@ -1,0 +1,15 @@
+Taxa de atendimento do roteador (bps)
+Taxa de transmissão do servidor (bps)
+Número de grupos de servidores
+Atraso de propagação do grupo 1 (ms)
+Número de servidores do grupo 1
+Atraso de propagação do grupo 2 (ms)
+Número de servidores do grupo 2
+Tamanho médio das rajadas geométricas do Tráfego de fundo
+Intervalo médio entre chegadas das rajadas geométricas do Tráfego de fundo (ms)
+Tamanho do buffer (pacotes)
+MSS - Tamanho máximo do segmento (bits)
+Política de gargalo ( FIFO | RED )
+Tempo Total de Simulação (ms)
+Estimativa da Fase Transiente (ms)
+Gerar Estatísticas ( true | false )

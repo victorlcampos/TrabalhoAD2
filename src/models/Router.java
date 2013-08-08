@@ -3,6 +3,8 @@ package models;
 import java.util.ArrayList;
 import java.util.List;
 
+import Utils.SimulatorProperties;
+
 import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
@@ -74,7 +76,7 @@ public class Router implements Listener {
 		Long initialTime = Math.max(lastTimeDelivered, event.getTime());
 		
 		PackageModel packageModel = event.getPackageModel();
-		Long serviceTime = 1000l*1000000l*simulator.getMss()/broadcastRate;  
+		Long serviceTime = 1000l*1000000l*SimulatorProperties.MSS/broadcastRate;  
 		
 		onService = true;
 		lastTimeDelivered = initialTime+serviceTime;

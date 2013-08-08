@@ -3,6 +3,8 @@ package models;
 import java.util.Set;
 import java.util.TreeSet;
 
+import Utils.SimulatorProperties;
+
 import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
@@ -26,18 +28,18 @@ public class Receiver implements Listener {
 
 	@Override
 	public void Listen(Event event) {
-		if (event.getSender().equals(server)) {
+		if (event.getSender().equals(getServer())) {
 			PackageModel eventPackage = event.getPackageModel();
 						
 			if (eventPackage.equals(nextPackage)) {
 				
 				//Procura próximo pacote ainda não recebido
-				nextPackage = new PackageModel(nextPackage.getValue() + simulator.getMss());
+				nextPackage = new PackageModel(nextPackage.getValue() + SimulatorProperties.MSS);
 				Set<PackageModel> packagesToRemove = new TreeSet<PackageModel>();
 				
 				while (receivedPackages.contains(nextPackage)) {
 					packagesToRemove.add(nextPackage);
-					nextPackage = new PackageModel(nextPackage.getValue() + simulator.getMss());
+					nextPackage = new PackageModel(nextPackage.getValue() + SimulatorProperties.MSS);
 				}
 				
 				//Limpa pacotes da primeira sequencia completa da lista de recebidos.
@@ -62,6 +64,10 @@ public class Receiver implements Listener {
 		returnPackage.setSackOption(newReceivedPackages);
 		
 		long initialTime = event.getTime();
-		simulator.shotEvent(this, initialTime + server.getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, returnPackage);
-	}	
+		simulator.shotEvent(this, initialTime + getServer().getGroup().getDelay(), event.leaveServerTime(), EventType.ACK, returnPackage);
+	}
+
+	public Server getServer() {
+		return server;
+	}
 }

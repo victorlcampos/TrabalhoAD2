@@ -6,6 +6,8 @@ import org.apache.commons.math3.distribution.BinomialDistribution;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.stat.descriptive.moment.GeometricMean;
 
+import Utils.SimulatorProperties;
+
 import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
@@ -37,7 +39,7 @@ public class BackgroundTraffic implements Listener {
 		} else {
 			for (int i = 0; i < numPackagesToSend; i++) {
 				Simulator.getInstance().shotEvent(this, time+gustTime, time+gustTime, EventType.PACKAGE_SENT, nextPackageToSend);
-				nextPackageToSend = new PackageModel(nextPackageToSend.getValue() + Simulator.getInstance().getMss());
+				nextPackageToSend = new PackageModel(nextPackageToSend.getValue() + SimulatorProperties.MSS);
 				numPackagesSended++;
 			}
 		}

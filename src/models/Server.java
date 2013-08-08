@@ -10,9 +10,10 @@ import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
 import Enum.ServerStatus;
+import Utils.SimulatorProperties;
 
 public class Server implements Listener {
-	private static Integer id = 1;
+	private static int id = 1;
 	private Integer myId;
 	
 	/** Taxa de transmissão de um pacote em bytes*/
@@ -93,7 +94,7 @@ public class Server implements Listener {
 	private void sendPackage(Long initialTime, PackageModel packageModel) {
 		cancelTimeout(packageModel);//Cancela time out se houver, no caso de estar reenviando pacote.
 		
-		Long serviceTime = (long) (1000l*1000l*1000l*simulator.getMss()/broadcastRate);
+		Long serviceTime = (long) (1000l*1000l*1000l*SimulatorProperties.MSS/broadcastRate);
 		Long finishedServiceTime = initialTime+serviceTime;
 		
 		simulator.shotEvent(this, finishedServiceTime+group.getDelay(), initialTime, EventType.PACKAGE_SENT, new PackageModel(packageModel.getValue()));
@@ -129,9 +130,9 @@ public class Server implements Listener {
 
 	private void listenTimeOut(Event event) {
 		if (event.getSender().equals(this)) {						
-			threshold = Math.max(cwnd/2, simulator.getMss());
+			threshold = Math.max(cwnd/2, SimulatorProperties.MSS);
 			
-			cwnd = (double) simulator.getMss();
+			cwnd = (double) SimulatorProperties.MSS;
 			status = ServerStatus.SLOW_START;
 			duplicatedAcks = 0;
 			
@@ -184,7 +185,7 @@ public class Server implements Listener {
 		PackageModel eventPackage = event.getPackageModel();
 		
 		if (eventPackage.equals(lastAck)) {
-			cwnd += simulator.getMss();
+			cwnd += SimulatorProperties.MSS;
 			numOfPackages = getNumOfPackages();				
 		} else {
 			Integer waintingPackageSize = waitingPackages.size();
@@ -197,7 +198,7 @@ public class Server implements Listener {
 				System.out.println(ServerStatus.CONGESTION_AVOIDANCE);
 				cwnd = threshold;
 			} else {
-				cwnd += simulator.getMss();
+				cwnd += SimulatorProperties.MSS;
 				cwnd -= (waintingPackageSize - waitingPackages.size());
 			}
 			
@@ -220,13 +221,13 @@ public class Server implements Listener {
 		setStatus();
 				
 		if (this.status.equals(ServerStatus.SLOW_START)) {
-			cwnd += simulator.getMss();
+			cwnd += SimulatorProperties.MSS;
 		}else if(this.status.equals(ServerStatus.CONGESTION_AVOIDANCE)) {
-			Double numOfAcks = cwnd/simulator.getMss();
+			Double numOfAcks = cwnd/SimulatorProperties.MSS;
 			if (numOfAcks == 0) {
 				System.out.println(numOfAcks);
 			}
-			cwnd += simulator.getMss()/numOfAcks;
+			cwnd += SimulatorProperties.MSS/numOfAcks;
 		}		
 		walkWithWindow(event);
 						
@@ -261,8 +262,8 @@ public class Server implements Listener {
 		if (duplicatedAcks == 3) {
 			System.out.println(ServerStatus.FAST_RETRANSMIT);		
 			duplicatedAcks = 0;
-			threshold = Math.max(cwnd/2, simulator.getMss());
-			cwnd = threshold + 3*simulator.getMss();
+			threshold = Math.max(cwnd/2, SimulatorProperties.MSS);
+			cwnd = threshold + 3*SimulatorProperties.MSS;
 			removeSentPackage(lastAck);
 			nextPackageToSend = lastAck;
 			
@@ -371,7 +372,7 @@ public class Server implements Listener {
 
 	private void getNextPackage() {
 		while(sentThisPackage(nextPackageToSend)) {
-			nextPackageToSend = new PackageModel(nextPackageToSend.getValue() + simulator.getMss());
+			nextPackageToSend = new PackageModel(nextPackageToSend.getValue() + SimulatorProperties.MSS);
 		}
 	}
 
@@ -398,7 +399,7 @@ public class Server implements Listener {
 	}
 	
 	private Integer getNumOfPackages() {
-		Integer value = (int) Math.floor(cwnd/simulator.getMss()) - sentPackages.size() + receivedAckPackages.size();
+		Integer value = (int) Math.floor(cwnd/SimulatorProperties.MSS) - sentPackages.size() + receivedAckPackages.size();
 		return  Math.max(0, value);
 	}
 

@@ -1,5 +1,6 @@
 package Controller;
 
+import java.net.StandardProtocolFamily;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -7,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 import Utils.ConfidenceInterval;
+import Utils.PropertiesReader;
+import Utils.SimulatorProperties;
 
 import views.SimulatorView;
 
@@ -27,7 +30,6 @@ public class Simulator {
 	private List<Event> eventBuffer;
 	private List<Server> servers;
 	private static Simulator instance;
-	private Long mss;
 	private List<Double> means;
 	private Integer routerRate;
 	private Integer serverRate;
@@ -45,26 +47,19 @@ public class Simulator {
 		servers = new ArrayList<Server>();
 		eventBuffer = new ArrayList<Event>();
 		means = new ArrayList<Double>();
-
-		this.mss = 1500l;
 	}
 
 	public static void main(String[] args) {
 		Simulator simulator = Simulator.getInstance();
-
-		ServerGroup serverGroup = new ServerGroup(100 * 1000l*1000l);
-		Server server = new Server(simulator.getMss(), serverGroup, 1000l*1000l*1000l/8);
-
-		Router router = new Router(40, 10l*1000l*1000l/8, RouterType.FIFO);
-		new BackgroundTraffic(40, 24*1000*1000d);
-
-		Receiver receiver = new Receiver(server);		
-		server.startServer(receiver);			
+		
+		PropertiesReader.readProperties();
+		
+		initSimulator();
 		
 		Event event = null;
 		
 		Long time  = 0l;
-		Long totalTime = 50*1000*1000000l;
+		Long totalTime = SimulatorProperties.totalSimulationTime;
 		Boolean lastTime = false;
 		Boolean firstTime = false;
 		Long finalTime = totalTime;
@@ -97,12 +92,12 @@ public class Simulator {
 				break;
 			case ACK:
 				if (lastTime) {					
-					simulator.updatePlot(time, server);
+					simulator.updatePlot(time, getEventServer(event));
 				}
 				break;
 			case TIME_OUT:
 				if (lastTime) {
-					simulator.updatePlot(time, server);					
+					simulator.updatePlot(time, getEventServer(event));					
 				}
 				break;
 			default:
@@ -135,8 +130,31 @@ public class Simulator {
 		System.out.println();
 	}
 
+	private static Server getEventServer(Event event) {
+		if (event.getSender().getClass().equals(Server.class))
+			return (Server) event.getSender();
+		else if (event.getSender().getClass().equals(Receiver.class))
+			return ((Receiver) event.getSender()).getServer();
+		else 
+			return null;
+	}
+
+	private static void initSimulator() {
+		Router router = new Router(SimulatorProperties.bufferLength, SimulatorProperties.routerBroadcastRate, SimulatorProperties.routerPolicy);
+		new BackgroundTraffic(SimulatorProperties.averageGustLength, SimulatorProperties.averageGustInterval);
+		
+		for (int i = 0; i < SimulatorProperties.serverGroupsNumber; i++) {
+			ServerGroup serverGroup = new ServerGroup(SimulatorProperties.serverGroupDelay[i]);
+			for (int j = 0; j < SimulatorProperties.serverGroupQuantity[i]; j++) {
+				Server server = new Server(SimulatorProperties.MSS, serverGroup, SimulatorProperties.serverBroadcastRate);
+				Receiver receiver = new Receiver(server);
+				server.startServer(receiver);
+			}
+		}
+	}
+
 	private  void updatePlot(Long time, Server server) {
-		data.put(time, (int) (Math.floor(server.getCwnd()/mss)));
+		data.put(time, (int) (Math.floor(server.getCwnd()/SimulatorProperties.MSS)));
 	}
 
 	public void registerListener(Listener listener, EventType eventType) {
@@ -147,14 +165,6 @@ public class Simulator {
 		}
 
 		eventListeners.add(listener);
-	}
-
-	public Long getMss() {
-		return mss;
-	}
-
-	public void setMss(Long mss) {
-		this.mss = mss;
 	}
 
 	public List<Event> getEventBuffer() {
