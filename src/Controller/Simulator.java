@@ -1,17 +1,11 @@
 package Controller;
 
-import java.net.StandardProtocolFamily;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import Utils.ConfidenceInterval;
-import Utils.PropertiesReader;
-import Utils.SimulatorProperties;
-
-import views.SimulatorView;
+import java.util.Map.Entry;
 
 import models.BackgroundTraffic;
 import models.Event;
@@ -21,18 +15,23 @@ import models.Router;
 import models.Server;
 import models.ServerGroup;
 import models.interfaces.Listener;
+import views.SimulatorView;
 import Enum.EventType;
-import Enum.RouterType;
+import Utils.ConfidenceInterval;
+import Utils.PropertiesReader;
+import Utils.SimulatorProperties;
 
 public class Simulator {
 	private Map<EventType, List<Listener>> listeners;
-	private Map<Long, Integer> data;
+	private Map<Server, Map<Long, Integer>> data;
 	private List<Event> eventBuffer;
 	private List<Server> servers;
 	private static Simulator instance;
-	private List<Double> means;
+	
+	private Map<Server, List<Double>> means;
+	private Map<Server, Integer> serversRate;
+	
 	private Integer routerRate;
-	private Integer serverRate;
 
 	public static Simulator getInstance() {
 		if (instance == null) {
@@ -43,10 +42,11 @@ public class Simulator {
 
 	private Simulator() {
 		listeners = new HashMap<EventType, List<Listener>>();
-		data = new HashMap<Long, Integer>();
+		data = new HashMap<Server, Map <Long, Integer>>();
 		servers = new ArrayList<Server>();
 		eventBuffer = new ArrayList<Event>();
-		means = new ArrayList<Double>();
+		means = new HashMap<Server, List<Double>>();
+		serversRate = new HashMap<Server, Integer>();
 	}
 
 	public static void main(String[] args) {
@@ -65,7 +65,6 @@ public class Simulator {
 		Long finalTime = totalTime;
 		
 		simulator.routerRate = 0;
-		simulator.serverRate = 0;
 		Collections.sort(simulator.eventBuffer);
 
 		while (simulator.eventBuffer.size() > 0) {
@@ -87,7 +86,11 @@ public class Simulator {
 				break;
 			case PACKAGE_SENT:
 				if (event.getSender().getClass().equals(Server.class)) {
-					simulator.serverRate++;
+					Server server = getEventServer(event);
+					if (simulator.serversRate.get(server) == null) {
+						simulator.serversRate.put(server, 0);
+					}
+					simulator.serversRate.put(server, simulator.serversRate.get(server) + 1);
 				}
 				break;
 			case ACK:
@@ -109,22 +112,33 @@ public class Simulator {
 				if (lastTime) {				
 					break;
 				}else {
-					if (!firstTime) {						
-						simulator.means.add(simulator.serverRate*1000*1000000d/(totalTime));
-						if (ConfidenceInterval.getPrecision(simulator.means) <= 10) {
-							lastTime = true;
-						}
-					}
-					
+					if (!firstTime) {
+						lastTime = true;
+						for (Entry<Server, Integer> serverRate : simulator.serversRate.entrySet()) {
+							Server server = serverRate.getKey();
+							if (simulator.means.get(server) == null) {								
+								simulator.means.put(server, new ArrayList<Double>());
+							}
+							simulator.means.get(server).add(serverRate.getValue()*1000*1000000d/totalTime);
+							if (ConfidenceInterval.getPrecision(simulator.means.get(server)) > 10) {
+								lastTime = false;
+							}
+						}																		
+					}					
 					finalTime += totalTime;
-					simulator.serverRate = 0;
+					for (Server server : simulator.serversRate.keySet()) {
+						simulator.serversRate.put(server, 0);
+					}
 					firstTime = false;
 				}
 			}
 		}
 		
 		System.out.println(simulator.means);
-		System.out.println(ConfidenceInterval.getConfidenceInterval(simulator.means));
+		for (Entry<Server, List<Double>> means : simulator.means.entrySet()) {
+			System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
+		}
+		
 		new SimulatorView(simulator.data);
 		System.out.println(simulator.routerRate*1000*1000000l/time);
 		System.out.println();
@@ -149,12 +163,16 @@ public class Simulator {
 				Server server = new Server(SimulatorProperties.MSS, serverGroup, SimulatorProperties.serverBroadcastRate);
 				Receiver receiver = new Receiver(server);
 				server.startServer(receiver);
+				Simulator.getInstance().servers.add(server);
 			}
 		}
 	}
 
 	private  void updatePlot(Long time, Server server) {
-		data.put(time, (int) (Math.floor(server.getCwnd()/SimulatorProperties.MSS)));
+		if (data.get(server) == null) {
+			data.put(server, new HashMap<Long, Integer>());
+		}
+		data.get(server).put(time, (int) (Math.floor(server.getCwnd()/SimulatorProperties.MSS)));
 	}
 
 	public void registerListener(Listener listener, EventType eventType) {

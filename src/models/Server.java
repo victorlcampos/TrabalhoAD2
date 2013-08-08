@@ -138,9 +138,9 @@ public class Server implements Listener {
 			
 			nextPackageToSend = event.getPackageModel();
 			
-			if (receivedAckPackages.contains(nextPackageToSend)) {
-				throw new RuntimeException("Timeout de pacote já recebido");
-			}
+//			if (receivedAckPackages.contains(nextPackageToSend)) {
+//				throw new RuntimeException("Timeout de pacote já recebido");
+//			}
 			
 			sentPackages.remove(nextPackageToSend);
 			verifyTimeOut();

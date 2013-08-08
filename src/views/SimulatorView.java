@@ -5,6 +5,8 @@ import java.util.Map.Entry;
 
 import javax.swing.JFrame;
 
+import models.Server;
+
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -19,7 +21,7 @@ public class SimulatorView {
 	/**
 	 * Create the application.
 	 */
-	public SimulatorView(Map<Long, Integer> data) {
+	public SimulatorView(Map<Server, Map<Long, Integer>> data) {
 		initialize(data);
 		frame.setVisible(true);
 	}
@@ -27,17 +29,21 @@ public class SimulatorView {
 	/**
 	 * Initialize the contents of the frame.
 	 */
-	private void initialize(Map<Long, Integer> data) {
+	private void initialize(Map<Server, Map<Long, Integer>> data) {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 1600, 500);
 
 		XYSeriesCollection dataset = new XYSeriesCollection();
 		
-		XYSeries series = new XYSeries("txwnd/MSS");
-		for (Entry<Long, Integer> iterable_element : data.entrySet()) {
-			series.add(iterable_element.getKey(), iterable_element.getValue());
+		
+		for (Entry<Server, Map<Long, Integer>> serverDate : data.entrySet()) {			
+			XYSeries series = new XYSeries("txwnd/MSS - "+serverDate.getKey());
+			for (Entry<Long, Integer> iterable_element : serverDate.getValue().entrySet()) {
+				series.add(iterable_element.getKey(), iterable_element.getValue());
+			}		
+			dataset.addSeries(series);
 		}
-		dataset.addSeries(series);
+		
 		JFreeChart chart = ChartFactory.createXYLineChart(
 				"Gráfico do simulador", "Tempo", "Valor", dataset,
 				PlotOrientation.VERTICAL, true, true, false);
