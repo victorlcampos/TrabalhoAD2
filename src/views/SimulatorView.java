@@ -1,5 +1,6 @@
 package views;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -9,6 +10,7 @@ import models.Server;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
+import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.xy.XYSeries;
@@ -51,6 +53,13 @@ public class SimulatorView {
 		ChartPanel chartPanel = new ChartPanel(chart);
 		frame.add(chartPanel);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		
+		try {
+			ChartUtilities.saveChartAsPNG(new java.io.File("./testando.png"), chart, 1920, 1080);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}  
 	}
 
 }
