@@ -15,4 +15,9 @@ public class ServerGroup {
 	public void setDelay(Long delay) {
 		this.delay = delay;
 	}
+	
+	@Override
+	public String toString() {
+		return "Grupo "+delay;
+	}
 }

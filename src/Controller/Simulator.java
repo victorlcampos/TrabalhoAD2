@@ -135,8 +135,19 @@ public class Simulator {
 		}
 		
 		System.out.println(simulator.means);
+		Map<ServerGroup, List<Double>> groupMeans = new HashMap<ServerGroup, List<Double>>();
 		for (Entry<Server, List<Double>> means : simulator.means.entrySet()) {
+			ServerGroup group = means.getKey().getGroup();
+			if (groupMeans.get(group) == null) {
+				groupMeans.put(group, new ArrayList<Double>());
+			}
+			groupMeans.get(group).addAll(means.getValue());
+			
 			System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
+		}
+		
+		for (Entry<ServerGroup, List<Double>> groupMean : groupMeans.entrySet()) {
+			System.out.println(groupMean.getKey() +": "+ConfidenceInterval.getConfidenceInterval(groupMean.getValue()));
 		}
 		
 		new SimulatorView(simulator.data);
