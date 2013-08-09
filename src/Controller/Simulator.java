@@ -25,7 +25,10 @@ public class Simulator {
 	private Map<EventType, List<Listener>> listeners;
 	private Map<Server, Map<Long, Integer>> data;
 	private List<Event> eventBuffer;
+	
 	private List<Server> servers;
+	private BackgroundTraffic backgroundTraffic;
+	
 	private static Simulator instance;
 	
 	private Map<Server, List<Double>> means;
@@ -112,6 +115,7 @@ public class Simulator {
 				if (lastTime) {				
 					break;
 				}else {
+					simulator.backgroundTraffic.reseed();
 					if (!firstTime) {
 						lastTime = true;
 						for (Entry<Server, Integer> serverRate : simulator.serversRate.entrySet()) {
@@ -166,7 +170,7 @@ public class Simulator {
 
 	private static void initSimulator() {
 		Router router = new Router(SimulatorProperties.bufferLength, SimulatorProperties.routerBroadcastRate, SimulatorProperties.routerPolicy);
-		new BackgroundTraffic(SimulatorProperties.averageGustLength, SimulatorProperties.averageGustInterval);
+		Simulator.getInstance().backgroundTraffic = new BackgroundTraffic(SimulatorProperties.averageGustLength, SimulatorProperties.averageGustInterval);
 		
 		for (int i = 0; i < SimulatorProperties.serverGroupsNumber; i++) {
 			ServerGroup serverGroup = new ServerGroup(SimulatorProperties.serverGroupDelay[i]);

@@ -18,6 +18,7 @@ public class BackgroundTraffic implements Listener {
 	private Integer numPackagesSended;
 	private PackageModel nextPackageToSend;
 	private ExponentialDistribution exponentialDistribution;
+	private Random randomNumber;
 
 	
 	public BackgroundTraffic(Integer avgGustLength, Double avgGustInterval) {
@@ -26,6 +27,7 @@ public class BackgroundTraffic implements Listener {
 		this.avgGustLength = avgGustLength;
 						
 		this.exponentialDistribution = new ExponentialDistribution(avgGustInterval);
+		randomNumber = new Random(System.nanoTime());
 		sendGust(0l);
 	}	
 	
@@ -65,8 +67,11 @@ public class BackgroundTraffic implements Listener {
 		this.exponentialDistribution = exponentialDistribution;
 	}
 	
-	public double gustLength(){
-		Random randomNumber = new Random(System.nanoTime());
+	public double gustLength(){		
 		return Math.log(randomNumber.nextDouble()) / Math.log(1 - 1d/avgGustLength);
+	}
+	
+	public void reseed() {
+		randomNumber = new Random(System.nanoTime());
 	}
 }
