@@ -2,13 +2,13 @@ package models;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import Utils.SimulatorProperties;
+import java.util.Random;
 
 import models.interfaces.Listener;
 import Controller.Simulator;
 import Enum.EventType;
 import Enum.RouterType;
+import Utils.SimulatorProperties;
 
 public class Router implements Listener {
 	private List<Event> eventBuffer;
@@ -22,6 +22,46 @@ public class Router implements Listener {
 	
 	private Simulator simulator;
 	private Long lastTimeDelivered;
+	
+	/**
+	 * Valor de wq usado pela política RED.
+	 */
+	private Float wq;
+	
+	/**
+	 * Valor de minth usado pela política RED.
+	 */
+	private Integer minth;
+	
+	/**
+	 * Valor de maxth usado pela política RED.
+	 */
+	private Integer maxth;
+	
+	/**
+	 * Valor de maxp usado pela política RED.
+	 */
+	private Float maxp;
+	
+	/**
+	 * Ocupação média da fila, usado somente pela política RED.
+	 */
+	private Float avg;
+	
+	/**
+	 * Representa o número de pacotes não descartados desde o último descarte, utilizado pela política RED.
+	 */
+	private Integer count; 
+	
+	/**
+	 * Gerador de número aleatórios.
+	 */
+	private Random rand;
+	
+	/**
+	 * Armazena o tempo em que se iniciou o último período ocioso.
+	 */
+	private Long lastBusyPeriodTime;
 
 	public Router(Integer bufferSize, Long broadcastRate, RouterType type) {
 		super();
@@ -37,6 +77,15 @@ public class Router implements Listener {
 		simulator.registerListener(this, EventType.PACKAGE_SENT);
 		simulator.registerListener(this, EventType.PACKAGE_DELIVERED);
 		lastTimeDelivered = 0l;
+		
+		rand = new Random();
+		wq = 0.002f;
+		minth = 5;
+		maxth = 15;
+		maxp = 0.02f;
+		avg = 0f;
+		count = 0; 
+		lastBusyPeriodTime =  0l;
 	}
 
 	@Override
@@ -44,31 +93,56 @@ public class Router implements Listener {
 		switch (event.getType()) {
 		case PACKAGE_SENT:
 			if (type.equals(RouterType.FIFO)) {
-				if(onService) {
-					if (eventBuffer.size() < bufferSize) {
-						eventBuffer.add(event);	//Caso o buffer esteja cheio, o pacote é descartado.	
-					}
+				acceptPackage(event);
+			} else if (type.equals(RouterType.RED)) {
+				
+				if (onService)
+					avg = (1 - wq)*avg + wq*eventBuffer.size(); 
+				else
+					avg = (float) (Math.pow((1 - wq), event.getTime() - lastBusyPeriodTime) * avg);
+				
+				if (eventBuffer.size() >= bufferSize || avg > maxth) {
+					// pacote é perdido
+					count = 0;
+				}else if (avg < minth) {
+					acceptPackage(event);
 				} else {
-					//Caso o buffer esteja vazio, inicia o atendimento imediatamente.
-					deliverPackage(event);
+					Float pb = maxp*(avg - minth) / (maxth - minth);
+					Float pa = pb / (1 - count*pb);
+					
+					
+					if (rand.nextFloat() < pa) {
+						acceptPackage(event);
+						count++;
+					} else {
+						// pacote é perdido
+						count = 0;
+					}
 				}
-			} else {
-				// TODO - Fazer o Red
+				
 			}
 			break;
 		case PACKAGE_DELIVERED:
-			if (type.equals(RouterType.FIFO)) {
-				if (eventBuffer.size() == 0) {
-					onService = false;
-				} else {
-					deliverPackage(eventBuffer.remove(0));//Já que pacote acabou de ser servido, inicia serviço do outro.
-				}
+			if (eventBuffer.size() == 0) {
+				onService = false;
+				lastBusyPeriodTime = event.getTime();
 			} else {
-				// TODO - Fazer o Red
+				deliverPackage(eventBuffer.remove(0));//Já que pacote acabou de ser servido, inicia serviço do outro.
 			}
 			break;
 		default:
 			break;
+		}
+	}
+
+	private void acceptPackage(Event event) {
+		if(onService) {
+			if (eventBuffer.size() < bufferSize) {
+				eventBuffer.add(event);	//Caso o buffer esteja cheio, o pacote é descartado.	
+			}
+		} else {
+			//Caso o buffer esteja vazio, inicia o atendimento imediatamente.
+			deliverPackage(event);
 		}
 	}
 
