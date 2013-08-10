@@ -43,6 +43,9 @@ public class Simulator {
 	 */
 	private Map<EventType, List<Listener>> listeners;
 	
+	/**
+	 * Pontos de cada servidor para plotar no gráfico
+	 */
 	private Map<Server, Map<Long, Integer>> data;
 	
 	/**
@@ -50,6 +53,9 @@ public class Simulator {
 	 */
 	private List<Event> eventBuffer;
 	
+	/**
+	 * Lista de servidores existentes na simulação
+	 */
 	private List<Server> servers;
 	
 	/**
@@ -59,15 +65,23 @@ public class Simulator {
 	
 	private static Simulator instance;
 	
-	/** Map com as médias das taxas de transmissão das rodadas de simulação para cada servidor */
+	/** Map com as médias das taxas de transmissão das rodadas de simulação para cada servidor 
+	 * 
+	 * */
 	private Map<Server, List<Double>> means;
 	
-	/** Map com as taxas de transmissão de cada servidor */
+	/** Map com as taxas de transmissão de cada servidor 
+	 * 
+	 * */
 	private Map<Server, Integer> serversRate;
 	
-	/** Taxa de atendimento do roteador. Guarda a soma dos atendimentos até o momento*/
+	/** Taxa de atendimento do roteador. Guarda a soma dos atendimentos até o momento
+	 * 
+	 * */
 	private Integer routerRate;
 
+	
+	
 	public static Simulator getInstance() {
 		if (instance == null) {
 			instance = new Simulator();
@@ -200,8 +214,15 @@ public class Simulator {
 				}
 			}
 		}
+		//======================================
+		//FIM DA SIMULAÇÃO
+		//======================================
+		
 		System.out.println(simulator.means);
+		//Map com medias das taxas por grupo e servidor
 		Map<ServerGroup, List<Double>> groupMeans = new HashMap<ServerGroup, List<Double>>();
+		
+		//Imprime intervalo de confiança de cada servidor, e preenche medias dos grupos
 		for (Entry<Server, List<Double>> means : simulator.means.entrySet()) {
 			ServerGroup group = means.getKey().getGroup();
 			if (groupMeans.get(group) == null) {
@@ -212,10 +233,12 @@ public class Simulator {
 			System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
 		}
 		
+		//Imprime intervalos de confiança por grupo
 		for (Entry<ServerGroup, List<Double>> groupMean : groupMeans.entrySet()) {
 			System.out.println(groupMean.getKey() +": "+ConfidenceInterval.getConfidenceInterval(groupMean.getValue()));
 		}
 		
+		//Plota gráfico
 		new SimulatorView(simulator.data);
 		System.out.println(simulator.routerRate*1000*1000000l/time);
 		System.out.println();
