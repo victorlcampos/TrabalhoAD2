@@ -118,7 +118,7 @@ public class Simulator {
 		//Indica que é a primeira rodada, ou seja, a fase transiente 
 		Boolean firstRound = true;
 		//Guarda o tempo de término da rodada atual
-		Long currentRoundEndTime = roundDuration;
+		Long currentRoundEndTime = SimulatorProperties.transientTime;
 
 		simulator.routerRate = 0;
 		Collections.sort(simulator.eventBuffer);
