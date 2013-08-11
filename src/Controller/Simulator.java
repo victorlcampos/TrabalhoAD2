@@ -33,7 +33,9 @@ import Utils.SimulatorProperties;
  * 
  * @see Server, Receptor, Router, BackgroundTraffic
  */
+
 public class Simulator {
+	
 	/**
 	 * Mapa para registrar os objetos que escutarão um determinado evento.
 	 * <p>
@@ -63,20 +65,23 @@ public class Simulator {
 	 */
 	private BackgroundTraffic backgroundTraffic;
 	
+	/**
+	 * Instancia única da classe Simulator controlada por singleton
+	 */
 	private static Simulator instance;
 	
-	/** Map com as médias das taxas de transmissão das rodadas de simulação para cada servidor 
-	 * 
+	/** 
+	 * Map com as médias das taxas de transmissão das rodadas de simulação para cada servidor 
 	 * */
 	private Map<Server, List<Double>> means;
 	
-	/** Map com as taxas de transmissão de cada servidor 
-	 * 
+	/** 
+	 * Map com as taxas de transmissão de cada servidor 
 	 * */
 	private Map<Server, Integer> serversRate;
 	
-	/** Taxa de atendimento do roteador. Guarda a soma dos atendimentos até o momento
-	 * 
+	/** 
+	 * Taxa de atendimento do roteador. Guarda a soma dos atendimentos até o momento
 	 * */
 	private Integer routerRate;
 
@@ -163,14 +168,14 @@ public class Simulator {
 				
 			case ACK:
 				if (lastRound) {		
-					//Quando um ack é recebido, é adicionado um ponto no gráfico
+					//Quando um ack é recebido, é adicionado um ponto no gráfico (apenas na última rodada)
 					simulator.updatePlot(time, getEventServer(event));
 				}
 				break;
 				
 			case TIME_OUT:
 				if (lastRound) {
-					//Quando um time_out acontece, é adicionado um ponto no gráfico
+					//Quando um time_out acontece, é adicionado um ponto no gráfico (apenas na última rodada)
 					simulator.updatePlot(time, getEventServer(event));					
 				}
 				break;
@@ -215,7 +220,7 @@ public class Simulator {
 			}
 		}
 		//======================================
-		//FIM DA SIMULAÇÃO
+		//          FIM DA SIMULAÇÃO
 		//======================================
 		
 		System.out.println(simulator.means);
@@ -244,6 +249,14 @@ public class Simulator {
 		System.out.println();
 	}
 
+	/**
+	 * Retorna o servidor que enviou o pacote relacionado a este evento.
+	 * <p>
+	 * No caso de ter sido enviado por um receptor, pega o servidor do receptor.
+	 * <p>
+	 * @param event
+	 * @return servidor
+	 */
 	private static Server getEventServer(Event event) {
 		if (event.getSender().getClass().equals(Server.class))
 			return (Server) event.getSender();
@@ -253,7 +266,9 @@ public class Simulator {
 			return null;
 	}
 
-	/** Inicializa o roteador, o tráfego de fundo, e os servidores em tempo aleatório */
+	/** 
+	 * Inicializa o roteador, o tráfego de fundo, e os servidores em tempo aleatório 
+	 */
 	private static void initSimulator() {
 		Router router = new Router(SimulatorProperties.bufferLength, SimulatorProperties.routerBroadcastRate, SimulatorProperties.routerPolicy);
 		Simulator.getInstance().backgroundTraffic = new BackgroundTraffic(SimulatorProperties.averageGustLength, SimulatorProperties.averageGustInterval);
@@ -269,8 +284,8 @@ public class Simulator {
 		}
 	}
 
-	/** Adiciona às informações que o gráfico vai plotar, o tamanho da janela, no tempo atual.  
-	 * 
+	/**  
+	 * Adiciona às informações que o gráfico vai plotar, o tamanho da janela, no tempo atual. 
 	 * @param time
 	 * @param server
 	 */
@@ -281,6 +296,11 @@ public class Simulator {
 		data.get(server).put(time, (int) (Math.floor(server.getCwnd()/SimulatorProperties.MSS)));
 	}
 
+	/**
+	 * Adiciona o objeto que estende de listener á lista de listeners do eventType passado como parametro
+	 * @param listener
+	 * @param eventType
+	 */
 	public void registerListener(Listener listener, EventType eventType) {
 		List<Listener> eventListeners = listeners.get(eventType);
 		if (eventListeners == null) {
@@ -291,14 +311,27 @@ public class Simulator {
 		eventListeners.add(listener);
 	}
 
+	/**
+	 * Retorna a lista de eventos do simulator
+	 * @return eventbuffer
+	 */
 	public List<Event> getEventBuffer() {
 		return eventBuffer;
 	}
 
-	public void setEventBuffer(List<Event> eventBuffer) {
-		this.eventBuffer = eventBuffer;
-	}
-
+	/**
+	 * Dispara um evento de um determinado tipo <code>EventType</code>.
+	 * <p>
+	 * Haverá a criação de um <code>Event</code>, de acordo com os parâmetros passados.
+	 * Tal evento será adicionado na estrutura de controle dos eventos, 
+	 * para fazer os eventos acontecerem no instante de tempo especificado.
+	 *  
+	 * @param eventType 
+	 * @param time 
+	 * @param leaveServerTime 
+	 * @param sender 
+	 * @param packageModel
+	 */
 	public void shotEvent(Object sender, long time, long leaveServerTime, EventType type, PackageModel packageModel) {
 		Event event = new Event(packageModel, sender, time, leaveServerTime,
 				type);
