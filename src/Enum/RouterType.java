@@ -1,5 +1,11 @@
 package Enum;
 
+/**
+ * Conjunto dos tipos de políticas de descarte de pacotes na fila de espera do roteador
+ */
 public enum RouterType {
-	FIFO, RED
+	/** First In First Out */
+	FIFO, 
+	/** Random Early Detection */
+	RED
 }
