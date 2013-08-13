@@ -72,7 +72,7 @@ public class Server implements Listener {
 		
 		Random rand = new Random(System.nanoTime());
 		
-		sendPackage(rand.nextInt(100)*1000000l, lastAck);
+		sendPackage(rand.nextInt(1000)*1000000l, lastAck);
 	}
 
 	@Override
@@ -138,10 +138,6 @@ public class Server implements Listener {
 			
 			nextPackageToSend = event.getPackageModel();
 			
-//			if (receivedAckPackages.contains(nextPackageToSend)) {
-//				throw new RuntimeException("Timeout de pacote já recebido");
-//			}
-			
 			sentPackages.remove(nextPackageToSend);
 			verifyTimeOut();
 			
@@ -151,11 +147,6 @@ public class Server implements Listener {
 
 	private void listenAck(Event event) {
 		if (event.getSender().equals(receiver)) {
-			
-//			if (sentPackages.size() == 0 || sentPackages.size() < receivedAckPackages.size()) {
-//				System.out.println("Stop");
-//				throw new RuntimeException("Lista de pacotes enviados corrompida");
-//			}
 			
 			PackageModel eventPackage = event.getPackageModel();
 			receivedAckPackages = eventPackage.getSackOption();

@@ -71,5 +71,16 @@ public class ConfidenceInterval {
 
 		return null;
 	}
+	
+	public static Double getMean(List<Double> data) {
+		if (data != null && data.size() > 0) {
+			stats = new SummaryStatistics();
+			for (Double d : data) {
+				stats.addValue(d);
+			}
+			return stats.getMean();
+		}
+		return -1d;
+	}
 
 }

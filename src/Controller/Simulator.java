@@ -126,6 +126,7 @@ public class Simulator {
 		//=====================================
 
 		//Execução do simulador
+		Long realTime = System.currentTimeMillis();
 		while (simulator.eventBuffer.size() > 0) {
 			
 			//Pega primeiro evento que deve acontecer da lista de eventos, já removendo-o da lista.
@@ -198,7 +199,7 @@ public class Simulator {
 							//Adiciona a média desta rodada para este servidor no map de médias
 							simulator.means.get(server).add(serverRate.getValue()*1000*1000000d/roundDuration);
 							//Não deixa simulação terminar até que precisão seja pelo menos 10%
-							if (ConfidenceInterval.getPrecision(simulator.means.get(server)) > 10) {
+							if (ConfidenceInterval.getPrecision(simulator.means.get(server)) > 5) {
 								lastRound = false;
 							}
 						}																		
@@ -214,6 +215,7 @@ public class Simulator {
 				}
 			}
 		}
+		System.out.println("Tempo de simulação(ms): " + (System.currentTimeMillis() - realTime));
 		//======================================
 		//FIM DA SIMULAÇÃO
 		//======================================
@@ -228,7 +230,7 @@ public class Simulator {
 			if (groupMeans.get(group) == null) {
 				groupMeans.put(group, new ArrayList<Double>());
 			}
-			groupMeans.get(group).addAll(means.getValue());
+			groupMeans.get(group).add(ConfidenceInterval.getMean(means.getValue()));
 			
 			System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
 		}
