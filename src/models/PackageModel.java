@@ -77,8 +77,8 @@ public class PackageModel implements Comparable<PackageModel> {
 	/**
 	 * Compara dois PackageModel pelo seu identificador
 	 * @return 	- 0 se o PackageModel passado for igual ao que chamou a função;<br>
-	 * 			- positivo se quem chamou a função é um pacote anterior ao pacote passado;<br>
-	 * 			- negativo se quem chamou a função é um pacote posterior ao pacote passado.
+	 * 			- positivo se quem chamou a função é um pacote posterior ao pacote passado;<br>
+	 * 			- negativo se quem chamou a função é um pacote anterior ao pacote passado.
 	 */
 	@Override
 	public int compareTo(PackageModel o) {
