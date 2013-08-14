@@ -203,7 +203,7 @@ public class Simulator {
 							}
 							//Adiciona a média desta rodada para este servidor no map de médias
 							simulator.means.get(server).add(serverRate.getValue()*1000*1000000d/roundDuration);
-							//Não deixa simulação terminar até que precisão seja pelo menos 10%
+							//Não deixa simulação terminar até que precisão seja pelo menos 5%
 							if (ConfidenceInterval.getPrecision(simulator.means.get(server)) > 5) {
 								lastRound = false;
 							}
