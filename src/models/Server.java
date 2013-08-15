@@ -99,9 +99,13 @@ public class Server implements Listener {
 	private Set<PackageModel> sentPackages;
 	
 	/**
-	 * Conjunto dos pacotes que o servidor recebeu fora de ordem.
+	 * Conjunto dos pacotes que o receptor recebeu fora de ordem.
 	 */
 	private Set<PackageModel> receivedAckPackages;
+	
+	/**
+	 * Lista de pacotes a serem reenviados no fast retransmit
+	 */
 	private Set<PackageModel> waitingPackages;
 
 	/**
@@ -135,6 +139,7 @@ public class Server implements Listener {
 		status = ServerStatus.SLOW_START;
 		
 		myId = id++;
+		//número de pacotes a serem enviados inicia em 1
 		numOfPackages = 1;
 		
 		sentPackages = new TreeSet<PackageModel>();
@@ -290,6 +295,8 @@ public class Server implements Listener {
 	 * enviados pela estação receptora conectada a esta estação transmissora.
 	 * <p>
 	 * Este tipo de evento confirma o recebimento de um pacote por parte da estação receptora.
+	 * <p>
+	 * Neste método, o conjunto receivedAckPackages recebe os elementos da lista de pacotes recebidos contidos no sackOption
 	 * 
 	 * @param event evento do tipo <code>EventType.ACK</code>, Caso o <code>Sender</code> do evento não tenha sido o <code>Receptor</code> conectado a este <code>Server</code>, nada será feito.
 	 */
@@ -309,8 +316,10 @@ public class Server implements Listener {
 			if (status.equals(ServerStatus.FAST_RETRANSMIT)) {
 				fastRetransmitAck(event);				
 			}else if (eventPackage.equals(lastAck)) {	//Se é um ack duplicado, ou seja, espera mesmo pacote que o último ack.	
+				//Providencia entrada no modo fast retransmit e inica recuperação
 				duplicatedAck(event);
 			}else {
+				//Trata recebimento de ack que indica pacote novo recebido na ordem
 				rigthAck(event, eventPackage);	
 			}
 		}
@@ -326,21 +335,31 @@ public class Server implements Listener {
 	}
 
 	/**
-	 * Chamado no listenAck, para retransmitir
+	 * Chamado no listenAck() para tratar recebimento de ack quando se está em fast retransmit.
+	 * <p>
+	 * Se for ack duplicado, incrementa tamanho da janela,
+	 * se for ack indicando recebimento de pacote novo, remove este da lista dos acks esperados.<br>
+	 * E se ao remover, a lista ficar vazia, passa para Congestion Avoidance.
+	 * <p>
+	 * Neste último caso, ao final, desloca-se a janela.
+	 * <p>
+	 * Sempre é requisitado ao sendPackage() o envio do próximo pacote
 	 * @param event
 	 */
 	private void fastRetransmitAck(Event event) {
 		
 		PackageModel eventPackage = event.getPackageModel();
 		
-		if (eventPackage.equals(lastAck)) {
+		if (eventPackage.equals(lastAck)) {//Se for ack duplicado, aumenta a janela
 			cwnd += SimulatorProperties.MSS;
 			numOfPackages = getNumOfPackages();				
 		} else {
-			Integer waintingPackageSize = waitingPackages.size();
+			//Se ack indica recebimento de pacote novo, remove ele da lista de pacotes a recuperar
+			Integer waitingPackageSize = waitingPackages.size();
 			waitingPackages.remove(lastAck);
 			waitingPackages.removeAll(receivedAckPackages);
 						
+			//Se já tiver recebido ack de todos os pacotes perdidos, passa para congestion avoidance
 			if (waitingPackages.size() == 0) {
 				duplicatedAcks = 0;
 				status = ServerStatus.CONGESTION_AVOIDANCE;
@@ -348,9 +367,10 @@ public class Server implements Listener {
 				cwnd = threshold;
 			} else {
 				cwnd += SimulatorProperties.MSS;
-				cwnd -= (waintingPackageSize - waitingPackages.size());
+				cwnd -= (waitingPackageSize - waitingPackages.size());
 			}
 			
+			//Desloca janela de transmissão
 			walkWithWindow(event);
 		}
 		
@@ -381,6 +401,13 @@ public class Server implements Listener {
 		expectedReturnTime += (long) differenceBetweenRealAndExpectation/8;
 	}
 
+	/**
+	 * Trata recebimento de pacote novo recebido na ordem correta.
+	 * <p>
+	 * Anda com a janela, e envia próximo pacote
+	 * @param event
+	 * @param eventPackage
+	 */
 	private void rigthAck(Event event, PackageModel eventPackage) {
 		duplicatedAcks = 0;
 		setStatus();
@@ -401,44 +428,60 @@ public class Server implements Listener {
 		sendPackage(event.getTime(), nextPackageToSend);
 	}
 
+	/**
+	 * Desloca janela de transmissão
+	 * @param event
+	 */
 	private void walkWithWindow(Event event) {
 		cancelTimeout(lastAck);
 		
 		lastAck = event.getPackageModel();
 		
-		Set<PackageModel> removeSendedPackages = new TreeSet<PackageModel>();
+		Set<PackageModel> removeSentPackages = new TreeSet<PackageModel>();
 
 		for (PackageModel packageModel : sentPackages) {
 			if (packageModel.compareTo(lastAck) == -1) {
 				cancelTimeout(packageModel);
-				removeSendedPackages.add(packageModel);
+				removeSentPackages.add(packageModel);
 			}
 		}
 		
-		sentPackages.removeAll(removeSendedPackages);
+		sentPackages.removeAll(removeSentPackages);
 		verifyTimeOut();
 		numOfPackages = getNumOfPackages();
 
 		nextPackageToSend = lastAck;
 	}
 
+	/**
+	 * Trata o recebimento de um ack duplicado quando não se está já em fast retransmit. Chamado pelo listenAck()
+	 * <p>
+	 * Passa para Fast Retransmit, e inicia o reenvio dos pacotes perdidos
+	 * @param event
+	 */
 	private void duplicatedAck(Event event) {
 		duplicatedAcks++;
 		if (duplicatedAcks == 3) {
-			System.out.println(ServerStatus.FAST_RETRANSMIT);		
+			System.out.println(ServerStatus.FAST_RETRANSMIT);	
+			//Ao receber o terceiro ack duplicado, reinicia a contagem
 			duplicatedAcks = 0;
+			//Diminui threshold pela metade
 			threshold = Math.max(cwnd/2, SimulatorProperties.MSS);
 			cwnd = threshold + 3*SimulatorProperties.MSS;
+			//Remove pacote do ack esperado da lista de pacotes enviados
 			removeSentPackage(lastAck);
+			//O pacote esperado pelo ack será o primeiro a ser reenviado
 			nextPackageToSend = lastAck;
-			
+			//Muda o modo de transmissão desse servidor para fast retransmit
 			status = ServerStatus.FAST_RETRANSMIT;
+			
+			//Inicia reenvido dos pacotes perdidos
 			resendPackages(event.getTime());			
 		}
 	}
 
 	/**
-	 * Reenvia pacotes, tratando o caso ter sofrido timeout, ou de fast retransmit
+	 * Reenvia pacotes, tratando o caso de ter sofrido timeout, ou de fast retransmit
 	 * <p>
 	 * Realiza-se uma verificação dos pacotes que já foram enviados e ainda não receberam
 	 * a confirmação correspondente ao recebimento do pacote, para que esses também possam
@@ -447,8 +490,7 @@ public class Server implements Listener {
 	 * O próximo pacote a ser enviado então passa a ser o pacote que sofreu timeout,
 	 * atualizando também o número de pacotes que ainda faltam ser enviados.
 	 * <p>
-	 * Por último, o evento correspondente ao envio desse pacote é lançado, para que se
-	 * proceda com o envio do pacote.
+	 * É enviado apenas o primeiro pacote, que irá disparar o envio dos próximos
 	 * 
 	 * @param nextPackage pacote a ser reenviado.
 	 * @param time instante de tempo na simulação que o pacote será reenviado.
@@ -460,26 +502,32 @@ public class Server implements Listener {
 		//Reinicia lista de pacotes esperando ack
 		waitingPackages.clear();
 				
-		//Caso tenha sido chamado após receber 3 acks duplicados - Já vai estar no modo fast retransmit
+		//Caso tenha sido chamado após receber o terceiro ack duplicado, já vai estar no modo fast retransmit - 
 		if (status.equals(ServerStatus.FAST_RETRANSMIT)) {
-			List<PackageModel> removedEvents = new ArrayList<PackageModel>();
-			
+			List<PackageModel> eventsToRemove = new ArrayList<PackageModel>();
+			//Adiciona na lista dos perdidos o pacote esperado do ack recebido. Este pacote já foi removido da lista de pacotes enviados no duplicatedAck()
 			waitingPackages.add(nextPackageToSend);
 			for (PackageModel packageModel : sentPackages) {
+				//Se receptor não recebeu pacote que está iterando
 				if (!receivedAckPackages.contains(packageModel)) {
-					removedEvents.add(packageModel);
+					//Vai adicionando todos os pacotes enviados que não foram recebidos na lista dos eventos a remover
+					eventsToRemove.add(packageModel);
+					//Também cancela o timeout deste pacote
 					cancelTimeout(packageModel);
+					//Adiciona na lista dos pacotes a recuperar
 					waitingPackages.add(packageModel);
 				}
 			}
-			sentPackages.removeAll(removedEvents);
+			//Remove todos os pacotes não recebidos da lista de pacotes enviados, pois vão ser enviados novamente
+			sentPackages.removeAll(eventsToRemove);
 			verifyTimeOut();
+			//Cancela todos os envios pacotes deste servidor
 			cancelAllSentEventsEvent();
 		} 
 		//Reenvio por timeout
 		else {
 			//Lista de eventos a serem removidos - Envio de pacotes 
-			List<Event> removedEvents = new ArrayList<Event>();
+			List<Event> eventsToRemove = new ArrayList<Event>();
 			List<Event> eventBuffer = simulator.getEventBuffer();
 			
 			//Itera sobre eventos de envio ao roteador de pacotes posteriores ao que sofreu timeout
@@ -488,7 +536,7 @@ public class Server implements Listener {
 				if (nextPackageToSend.compareTo(event.getPackageModel()) == -1) {						
 					if (event.getSender().equals(this) && event.getType().equals(EventType.PACKAGE_SENT)) {
 						//Adiciona o evento de envio de pacote à lista de eventos para serem removidos do buffer
-						removedEvents.add(event);
+						eventsToRemove.add(event);
 						//Remove pacote da lista de pacotes enviados
 						removeSentPackage(event.getPackageModel());
 						//Cancela o timeout do pacote que esta iterando
@@ -497,7 +545,7 @@ public class Server implements Listener {
 				}
 			}	
 			//Remove eventos da lista de eventos do Simulator
-			eventBuffer.removeAll(removedEvents);
+			eventBuffer.removeAll(eventsToRemove);
 		}
 		
 		//Atualiza número de pacotes que restam para enviar
@@ -550,6 +598,11 @@ public class Server implements Listener {
 		eventBuffer.removeAll(removedEvents);
 	}
 	
+	/** 
+	 * Cancela os eventos de todos os pacotes enviados por este servidor.
+	 * <p>
+	 * Remove eventos do buffer do Simulator, e também da lista de pacotes enviados, assim como o timeout
+	 */
 	private void cancelAllSentEventsEvent() {
 		List<Event> removedEvents = new ArrayList<Event>();
 		List<Event> eventBuffer = simulator.getEventBuffer();
@@ -586,10 +639,18 @@ public class Server implements Listener {
 		}
 	}
 
+	/**
+	 * Retorna tamanho da janela de transmissão em bytes
+	 * @return cwnd
+	 */
 	public Double getCwnd() {
 		return cwnd;
 	}
 
+	/**
+	 * Substitui tamanho da janela de transmissão
+	 * @param cwnd
+	 */
 	public void setCwnd(Double cwnd) {
 		this.cwnd = cwnd;
 	}
@@ -601,6 +662,10 @@ public class Server implements Listener {
 		return sentPackages.contains(nextPackageToSend);
 	}
 
+	/**
+	 * Altera o modo de transmissão de Slow Start para Congestion Avoidance, no caso de a janela ter atingido o threshold
+	 * 
+	 */
 	private void setStatus() {
 		if (status != ServerStatus.FAST_RETRANSMIT) {
 			if (cwnd < threshold) {
@@ -622,18 +687,34 @@ public class Server implements Listener {
 		return  Math.max(0, value);
 	}
 
+	/**
+	 * Retorna o grupo no qual este servidor está inserido.
+	 * 
+	 * @return <code>ServerGroup</code> que caracteriza o tipo deste servidor.
+	 */
 	public ServerGroup getGroup() {
 		return group;
 	}
-	
+
+	/**
+	 * Retorna lista de pacotes enviados por este servidor
+	 * @return sentPackages
+	 */
 	public Set<PackageModel> getSentPackages() {
 		return sentPackages;
 	}
 
+	/**
+	 * Substitui valor da lista de pacotes enviados por este servidor
+	 * @param sentPackages
+	 */
 	public void setSentPackages(Set<PackageModel> sentPackages) {
 		this.sentPackages = sentPackages;
 	}
 
+	/**
+	 * Representação em <code>String</code> de um servidor. 
+	 */
 	@Override
 	public String toString() {
 		return "Servidor "+myId;
