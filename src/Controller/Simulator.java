@@ -247,7 +247,7 @@ public class Simulator {
 			groupMeans.get(group).add(ConfidenceInterval.getMean(means.getValue()));
 			
 			if(instance.outputFileMode)
-				WriteToFile.writeln("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
+				WriteToFile.writeln(means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
 			else System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
 		}
 		
@@ -262,7 +262,7 @@ public class Simulator {
 		//Plota gráfico
 		new SimulatorView(simulator.data);
 		if(instance.outputFileMode)
-			WriteToFile.writeln(simulator.routerRate*1000*1000000l/time);
+			WriteToFile.writeln("Vazão do roteador: " + simulator.routerRate*1000*1000000l/time);
 		else System.out.println(simulator.routerRate*1000*1000000l/time);
 		WriteToFile.close();
 	}
