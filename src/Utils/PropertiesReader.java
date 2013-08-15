@@ -48,7 +48,6 @@ public class PropertiesReader {
 		
 		SimulatorProperties.totalSimulationTime = scanner.nextLong() * 1000l*1000l;
 		SimulatorProperties.transientTime = scanner.nextLong() * 1000l*1000l;
-		SimulatorProperties.generateStatistics = scanner.nextBoolean();
 		
 		printInputData();
 	}
@@ -73,7 +72,6 @@ public class PropertiesReader {
 		System.out.println("	   ---------------------------------------------");
 		System.out.println("		Tempo total de simulação: " + SimulatorProperties.totalSimulationTime + " ns");
 		System.out.println("		Estimativa da fase transiente: " + SimulatorProperties.transientTime + " ns");
-		System.out.println("		Gerar Estatísticas: " + SimulatorProperties.generateStatistics);
 		 		
 		System.out.println("\n	=======================================================");
 		System.out.println("	=======================================================\n");
