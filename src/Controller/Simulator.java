@@ -1,5 +1,6 @@
 package Controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import Enum.EventType;
 import Utils.ConfidenceInterval;
 import Utils.PropertiesReader;
 import Utils.SimulatorProperties;
+import Utils.WriteToFile;
 
 /**
  * 
@@ -35,6 +37,8 @@ import Utils.SimulatorProperties;
  */
 
 public class Simulator {
+
+	private boolean outputFileMode = true;
 	
 	/**
 	 * Mapa para registrar os objetos que escutarão um determinado evento.
@@ -103,12 +107,11 @@ public class Simulator {
 		serversRate = new HashMap<Server, Integer>();
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		Simulator simulator = Simulator.getInstance();
 		
 		//Leitura das variáveis de entrada
 		PropertiesReader.readProperties();
-		
 		initSimulator();
 		
 		//Inicialização de variáveis===========
@@ -220,12 +223,18 @@ public class Simulator {
 				}
 			}
 		}
-		System.out.println("Tempo de simulação(ms): " + (System.currentTimeMillis() - realTime));
+		if(instance.outputFileMode)
+			WriteToFile.writeln("Tempo de simulação(ms): " + (System.currentTimeMillis() - realTime));
+		else System.out.println("Tempo de simulação(ms): " + (System.currentTimeMillis() - realTime));
+		//WriteToFile.close();
+
 		//======================================
 		//          FIM DA SIMULAÇÃO
 		//======================================
 		
-		System.out.println(simulator.means);
+		if(instance.outputFileMode)
+			WriteToFile.writeln(simulator.means);
+		else	System.out.println(simulator.means);
 		//Map com medias das taxas por grupo e servidor
 		Map<ServerGroup, List<Double>> groupMeans = new HashMap<ServerGroup, List<Double>>();
 		
@@ -237,18 +246,25 @@ public class Simulator {
 			}
 			groupMeans.get(group).add(ConfidenceInterval.getMean(means.getValue()));
 			
-			System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
+			if(instance.outputFileMode)
+				WriteToFile.writeln("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
+			else System.out.println("Servidor "+means.getKey()+": "+ConfidenceInterval.getConfidenceInterval(means.getValue()));			
 		}
 		
 		//Imprime intervalos de confiança por grupo
-		for (Entry<ServerGroup, List<Double>> groupMean : groupMeans.entrySet()) {
-			System.out.println(groupMean.getKey() +": "+ConfidenceInterval.getConfidenceInterval(groupMean.getValue()));
-		}
-		
+			for (Entry<ServerGroup, List<Double>> groupMean : groupMeans.entrySet()) {
+				if (groupMean.getValue().size() > 1){ 
+					if(instance.outputFileMode)
+						WriteToFile.writeln(groupMean.getKey() +": "+ConfidenceInterval.getConfidenceInterval(groupMean.getValue()));
+					else System.out.println(groupMean.getKey() +": "+ConfidenceInterval.getConfidenceInterval(groupMean.getValue()));
+				}
+			}
 		//Plota gráfico
 		new SimulatorView(simulator.data);
-		System.out.println(simulator.routerRate*1000*1000000l/time);
-		System.out.println();
+		if(instance.outputFileMode)
+			WriteToFile.writeln(simulator.routerRate*1000*1000000l/time);
+		else System.out.println(simulator.routerRate*1000*1000000l/time);
+		WriteToFile.close();
 	}
 
 	/**
@@ -341,5 +357,13 @@ public class Simulator {
 //			System.out.println(event);
 		}
 		eventBuffer.add(event);
+	}
+
+	public boolean isOutputFileMode() {
+		return outputFileMode;
+	}
+
+	public void setOutputFileMode(boolean outputFileMode) {
+		this.outputFileMode = outputFileMode;
 	}
 }

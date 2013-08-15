@@ -1,5 +1,6 @@
 package models;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -11,6 +12,7 @@ import Controller.Simulator;
 import Enum.EventType;
 import Enum.ServerStatus;
 import Utils.SimulatorProperties;
+import Utils.WriteToFile;
 
 /**
  * 
@@ -178,7 +180,9 @@ public class Server implements Listener {
 	 */
 	@Override
 	public void Listen(Event event) {
-		System.out.println(event);
+		if(simulator.isOutputFileMode())
+			WriteToFile.writeln(event);
+		else System.out.println(event);
 		switch (event.getType()) {
 		case ACK:
 			listenAck(event);			
@@ -363,7 +367,9 @@ public class Server implements Listener {
 			if (waitingPackages.size() == 0) {
 				duplicatedAcks = 0;
 				status = ServerStatus.CONGESTION_AVOIDANCE;
-				System.out.println(ServerStatus.CONGESTION_AVOIDANCE);
+				if(simulator.isOutputFileMode())
+					WriteToFile.writeln(ServerStatus.CONGESTION_AVOIDANCE);
+				else System.out.println(ServerStatus.CONGESTION_AVOIDANCE);
 				cwnd = threshold;
 			} else {
 				cwnd += SimulatorProperties.MSS;
@@ -417,7 +423,9 @@ public class Server implements Listener {
 		}else if(this.status.equals(ServerStatus.CONGESTION_AVOIDANCE)) {
 			Double numOfAcks = cwnd/SimulatorProperties.MSS;
 			if (numOfAcks == 0) {
-				System.out.println(numOfAcks);
+				if(simulator.isOutputFileMode())
+					WriteToFile.writeln(numOfAcks);
+				else System.out.println(numOfAcks);
 			}
 			cwnd += SimulatorProperties.MSS/numOfAcks;
 		}		
@@ -462,7 +470,9 @@ public class Server implements Listener {
 	private void duplicatedAck(Event event) {
 		duplicatedAcks++;
 		if (duplicatedAcks == 3) {
-			System.out.println(ServerStatus.FAST_RETRANSMIT);	
+			if(simulator.isOutputFileMode())
+				WriteToFile.writeln(ServerStatus.FAST_RETRANSMIT);	
+			else System.out.println(ServerStatus.FAST_RETRANSMIT);	
 			//Ao receber o terceiro ack duplicado, reinicia a contagem
 			duplicatedAcks = 0;
 			//Diminui threshold pela metade
